@@ -45,7 +45,7 @@ export function Dashboard() {
     <>
       <div className="page-head">
         <div>
-          <h1>Buongiorno Mattia</h1>
+          <h1>Ciao Mattia</h1>
           <div className="sub" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
         </div>
         <div className="row">
