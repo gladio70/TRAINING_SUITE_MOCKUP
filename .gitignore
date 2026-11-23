@@ -1,0 +1,7 @@
+node_modules/
+dist/
+_toolchain/
+*.log
+# documenti di lavoro (requisiti, confronti): non pubblicarli nel repository
+REQUISITI/
+~$*
