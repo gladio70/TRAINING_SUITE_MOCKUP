@@ -8,7 +8,7 @@ I dati stanno nel `localStorage` del browser (Impostazioni → *Ripristina dati 
 
 ## Online
 
-https://gladio70.github.io/TRAINING_SUITE_MOCKUP/ — pubblicato automaticamente da GitHub Actions (`.github/workflows/pages.yml`) a ogni push su `main`.
+https://gladio70.github.io/TRAINING_SUITE_MOCKUP/ — a ogni push su `main` GitHub Actions (`.github/workflows/pages.yml`) compila il mockup e lo mette nel branch `gh-pages`, che GitHub Pages pubblica (Settings → Pages → Deploy from a branch → `gh-pages` / root).
 
 ## Avvio in locale
 
