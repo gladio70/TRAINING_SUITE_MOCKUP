@@ -6,7 +6,11 @@ Specifiche: cartella `REQUISITI\` (documenti di lavoro, esclusi dal repository).
 **Stato:** mockup navigabile con dati finti, solo locale. Serve a validare schermate e flussi prima di costruire il backend.
 I dati stanno nel `localStorage` del browser (Impostazioni → *Ripristina dati demo*).
 
-## Avvio
+## Online
+
+https://gladio70.github.io/TRAINING_SUITE_MOCKUP/ — pubblicato automaticamente da GitHub Actions (`.github/workflows/pages.yml`) a ogni push su `main`.
+
+## Avvio in locale
 
 ```powershell
 .\avvia.ps1
