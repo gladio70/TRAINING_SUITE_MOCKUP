@@ -10,6 +10,10 @@ I dati stanno nel `localStorage` del browser (Impostazioni → *Ripristina dati 
 
 https://gladio70.github.io/TRAINING_SUITE_MOCKUP/ — a ogni push su `main` GitHub Actions (`.github/workflows/pages.yml`) compila il mockup e lo mette nel branch `gh-pages`, che GitHub Pages pubblica (Settings → Pages → Deploy from a branch → `gh-pages` / root).
 
+### Aggiornamenti automatici
+
+Ogni build pubblica `version.json` (numero da `package.json` + commit). All'apertura la app lo rilegge dal server senza cache: se la build è diversa ricarica da sola la pagina con la versione nuova (`?v=<commit>` per scavalcare la cache del telefono). Quando la app torna in primo piano dallo sfondo, invece, mostra un avviso con *Aggiorna* / *Dopo*, per non perdere un modulo compilato a metà. Il numero di versione si vede nella barra laterale, nel menu *Altro* e in Impostazioni. Codice: `src/lib/versione.ts`, `src/components/Aggiornamento.tsx`, plugin in `vite.config.ts`.
+
 ## Avvio in locale
 
 ```powershell

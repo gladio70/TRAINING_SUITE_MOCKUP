@@ -1,5 +1,6 @@
 // Soglie degli avvisi (DASH-03) e gestione dei dati dimostrativi
 import { useStore } from '../data/store';
+import { VERSIONE, etichettaVersione } from '../lib/versione';
 
 export function Impostazioni() {
   const { db, setSoglie, ripristina } = useStore();
@@ -24,6 +25,10 @@ export function Impostazioni() {
           <h2>Dati dimostrativi</h2>
           <p className="small muted">
             Questo è un mockup: i dati sono inventati e le modifiche restano salvate solo in questo browser.
+          </p>
+          <p className="small muted">
+            Versione {etichettaVersione()} del {new Date(VERSIONE.data).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}.
+            A ogni apertura la app controlla se ne è uscita una nuova e la carica da sola.
           </p>
           <button className="btn" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>
             Ripristina dati demo

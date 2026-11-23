@@ -4,6 +4,8 @@ import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, Settings, U
 import { useStore } from '../data/store';
 import { calcolaAvvisi, messaggiSuggeriti } from '../data/logic';
 import { Modal } from './ui';
+import { Aggiornamento } from './Aggiornamento';
+import { etichettaVersione } from '../lib/versione';
 
 const VOCI = [
   { to: '/', label: 'Oggi', icon: Home, mobile: true },
@@ -38,7 +40,11 @@ export function Layout() {
             {badge(to) > 0 && <span className="nav-badge">{badge(to)}</span>}
           </NavLink>
         ))}
-        <div className="sidebar-foot">Mockup v0.1 · dati dimostrativi</div>
+        <div className="sidebar-foot">
+          Mockup · dati dimostrativi
+          <br />
+          {etichettaVersione()}
+        </div>
       </aside>
 
       <main className="main">
@@ -71,8 +77,11 @@ export function Layout() {
               </NavLink>
             ))}
           </div>
+          <p className="small muted" style={{ marginTop: 12 }}>TRAINING SUITE {etichettaVersione()}</p>
         </Modal>
       )}
+
+      <Aggiornamento />
     </div>
   );
 }

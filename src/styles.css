@@ -278,3 +278,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .page-head { margin-bottom: 14px; }
 }
+
+/* ---------- avviso di nuova versione ---------- */
+.aggiornamento {
+  position: fixed; z-index: 60; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  width: min(520px, calc(100% - 32px)); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 10px 12px; font-weight: 600;
+}
+.aggiornamento .small { color: var(--muted); font-weight: 400; }
+.aggiornamento .gira { animation: gira 1s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
