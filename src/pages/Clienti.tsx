@@ -46,10 +46,10 @@ export function Clienti() {
           </div>
         </div>
         <div className="azioni-pari">
-          <button className="btn" onClick={() => setNuovo(true)}>
+          <button className="btn primary" onClick={() => setNuovo(true)}>
             <Plus size={16} /> Nuovo cliente
           </button>
-          <button className="btn" onClick={() => setImporta(true)} title="Importa da Google Sheets">
+          <button className="btn primary" onClick={() => setImporta(true)} title="Importa da Google Sheets">
             <Upload size={16} /> Importa Sheets
           </button>
         </div>
