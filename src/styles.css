@@ -359,5 +359,5 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 /* agenda: pulsante Nuovo più largo (su telefono occupa lo spazio accanto a < Oggi >) */
 .toolbar-riga .btn.primary { min-width: 130px; justify-content: center; }
 @media (max-width: 860px) {
-  .toolbar-riga .btn.primary { flex: 1; margin-left: 8px; }
+  .toolbar-riga .btn.primary { min-width: 150px; }
 }
