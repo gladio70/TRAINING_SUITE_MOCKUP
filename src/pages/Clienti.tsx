@@ -89,7 +89,7 @@ export function Clienti() {
           <p>Nella versione reale qui si carica l’esportazione dei fogli attuali (clienti, pacchetti, incassi):</p>
           <ol className="small">
             <li>scelta del file (.xlsx o .csv) o collegamento al foglio Google;</li>
-            <li>abbinamento delle colonne ai campi di TRAINING_SUITE e scelta dell’attività;</li>
+            <li>abbinamento delle colonne ai campi di TRAINING SUITE e scelta dell’attività;</li>
             <li>anteprima con duplicati ed errori evidenziati;</li>
             <li>conferma dell’importazione.</li>
           </ol>

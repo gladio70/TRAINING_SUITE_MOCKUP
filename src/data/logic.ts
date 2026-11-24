@@ -149,13 +149,13 @@ export function testoMessaggio(db: Db, modelloId: string, c: Cliente, campi: Rec
     nome: c.nome,
     cognome: c.cognome,
     attivita: c.attivita.map((a) => ATTIVITA[a].nome).join(' / '),
-    link: 'https://training_suite.it/anamnesi/demo',
+    link: 'https://esempio.it/anamnesi/demo', // dominio ancora da definire (D-09)
     ...campi,
   });
 }
 
 /** Link per l'invio con un tocco (COM-02) */
-export function linkInvio(canale: 'WhatsApp' | 'Telegram' | 'Email', c: Cliente, testo: string, oggetto = 'TRAINING_SUITE') {
+export function linkInvio(canale: 'WhatsApp' | 'Telegram' | 'Email', c: Cliente, testo: string, oggetto = 'TRAINING SUITE') {
   const t = encodeURIComponent(testo);
   if (canale === 'WhatsApp') return `https://wa.me/${c.telefono.replace(/\D/g, '')}?text=${t}`;
   if (canale === 'Telegram') return c.telegram ? `https://t.me/${c.telegram.replace('@', '')}?text=${t}` : `https://t.me/share/url?url=&text=${t}`;

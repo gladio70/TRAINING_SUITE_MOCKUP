@@ -31,7 +31,7 @@ export function Layout() {
       <aside className="sidebar">
         <div className="brand">
           <img src="icon-192.png" alt="" />
-          TRAINING_SUITE
+          TRAINING SUITE
         </div>
         {VOCI.map(({ to, label, icon: I }) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>

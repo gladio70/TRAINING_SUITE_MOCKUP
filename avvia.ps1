@@ -1,4 +1,4 @@
-# Avvia il mockup TRAINING_SUITE in locale usando il Node portatile in _toolchain
+# Avvia il mockup TRAINING SUITE in locale usando il Node portatile in _toolchain
 $root = $PSScriptRoot
 $env:PATH = "$root\_toolchain\node;$env:PATH"
 Set-Location $root

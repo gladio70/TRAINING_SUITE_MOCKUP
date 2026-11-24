@@ -1,4 +1,4 @@
-// Modello dati del mockup TRAINING_SUITE (provvisorio: verrà rivisto sui Google Sheets reali, D-08)
+// Modello dati del mockup TRAINING SUITE (provvisorio: verrà rivisto sui Google Sheets reali, D-08)
 
 /** Le tre attività: ogni dato è associato a una di esse (requisito trasversale) */
 export type Attivita = 'VA' | 'LT' | 'VC';
