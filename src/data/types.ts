@@ -1,4 +1,5 @@
 // Modello dati del mockup TRAINING SUITE (provvisorio: verrà rivisto sui Google Sheets reali, D-08)
+// v0.3: aggiornato con le risposte di Mattia del 24/11/2026.
 
 /** Le tre attività: ogni dato è associato a una di esse (requisito trasversale) */
 export type Attivita = 'VA' | 'LT' | 'VC';
@@ -9,7 +10,24 @@ export const ATTIVITA: Record<Attivita, { nome: string; breve: string }> = {
   VC: { nome: 'Verticalisthenics Community', breve: 'Community' },
 };
 
-export type StatoCliente = 'attivo' | 'sospeso' | 'ex';
+/** Stato di una persona in un singolo servizio: la stessa persona può avere stati diversi per attività */
+export type StatoServizio = 'attivo' | 'pausa' | 'occasionale' | 'da verificare' | 'terminato';
+
+export const STATI: Record<StatoServizio, { nome: string; badge: string }> = {
+  attivo: { nome: 'Attivo', badge: 'ok' },
+  pausa: { nome: 'In pausa', badge: 'warn' },
+  occasionale: { nome: 'Occasionale', badge: 'neutral' },
+  'da verificare': { nome: 'Da verificare', badge: 'danger' },
+  terminato: { nome: 'Terminato', badge: 'neutral' },
+};
+
+export interface ServizioCliente {
+  attivita: Attivita;
+  stato: StatoServizio;
+  /** data prevista di ripresa o di richiamo */
+  ripresa?: string;
+  nota?: string;
+}
 
 export interface Cliente {
   id: string;
@@ -18,37 +36,50 @@ export interface Cliente {
   telefono: string;
   email: string;
   telegram?: string;
-  attivita: Attivita[];
-  stato: StatoCliente;
+  servizi: ServizioCliente[];
   obiettivi: string;
   note: string;
   privacyData?: string; // ISO date del consenso
   creatoIl: string;
 }
 
-export type TipoProdotto = 'pacchetto' | 'abbonamento' | 'percorso' | 'smallgroup';
+export type TipoProdotto = 'pacchetto' | 'carnet' | 'abbonamento' | 'percorso' | 'smallgroup' | 'programmazione';
 
 export interface Prodotto {
   id: string;
   attivita: Attivita;
   nome: string;
   tipo: TipoProdotto;
-  sessioni?: number; // assente = illimitato (abbonamento)
+  sessioni?: number; // assente = senza sessioni da scalare (abbonamento, programmazione)
   prezzo: number;
-  validitaGiorni: number;
+  validitaGiorni: number; // validità predefinita, modificabile alla vendita
   preavvisoOre: number; // PAC-03
   scalaTardiva: boolean; // PAC-03: disdetta tardiva scalata?
+  nonVendibile?: boolean; // es. carnet storici: esistono solo quelli già venduti
+}
+
+/** Come è stato acquisito il pacchetto: pagato, gratuito o in scambio professionale */
+export type Formula = 'pagamento' | 'gratuito' | 'scambio';
+
+export interface Proroga {
+  data: string;
+  giorni: number;
+  nota: string;
 }
 
 export interface PacchettoCliente {
   id: string;
-  clienteId: string;
+  clienteId: string; // titolare (a cui sono intestati i pagamenti)
+  condivisoCon?: string[]; // altri clienti che usano lo stesso pacchetto
   prodottoId: string;
   inizio: string;
-  scadenza: string;
+  scadenza: string; // già comprensiva delle proroghe
   sessioniTot?: number;
   usatePrima: number; // sessioni consumate prima dei dati presenti nel mockup
   prezzo: number;
+  formula: Formula;
+  storico?: string; // carnet storico: condizioni già concordate da mantenere
+  proroghe?: Proroga[];
 }
 
 export type Esito = 'effettuata' | 'disdetta' | 'tardiva' | 'assenza';
@@ -62,6 +93,11 @@ export const ESITI: Record<Esito, string> = {
 
 export type Luogo = 'Virgin Active' | 'Studio' | 'Online' | 'Parco';
 
+export interface Presenza {
+  clienteId: string;
+  pacchettoId?: string; // carnet scalato; assente = ingresso senza carnet
+}
+
 export interface Appuntamento {
   id: string;
   attivita: Attivita;
@@ -70,8 +106,13 @@ export interface Appuntamento {
   inizio: string; // ISO datetime
   durataMin: number;
   clienteId?: string;
+  con?: string[]; // altri clienti nella stessa sessione (pacchetto condiviso)
+  contatto?: string; // persona non ancora cliente (es. Body Check di un nuovo iscritto)
+  gratuito?: boolean; // es. Body Check: ore contate a parte, nessun pacchetto
+  daConfermare?: boolean;
   gruppo?: string; // classi / small group
   partecipanti?: number;
+  presenze?: Presenza[]; // classi community: presenze effettive che scalano i carnet
   pacchettoId?: string;
   esito?: Esito;
   eccezione?: string; // nota eccezione manuale (PAC-03)
@@ -90,6 +131,16 @@ export interface Pagamento {
   scadenza: string;
   pagatoIl?: string;
   metodo?: MetodoPagamento;
+}
+
+/** Costi professionali (anteprima ECO-03) */
+export interface Costo {
+  id: string;
+  attivita?: Attivita; // assente = costo comune
+  descrizione: string;
+  categoria: 'affitto' | 'attrezzatura' | 'formazione' | 'software' | 'altro';
+  importo: number;
+  data: string;
 }
 
 export interface Modello {
@@ -114,6 +165,7 @@ export interface Todo {
   data: string;
   fatto: boolean;
   attivita?: Attivita;
+  categoria?: 'amministrazione';
 }
 
 export interface Soglie {
@@ -127,6 +179,7 @@ export interface Db {
   pacchetti: PacchettoCliente[];
   appuntamenti: Appuntamento[];
   pagamenti: Pagamento[];
+  costi: Costo[];
   modelli: Modello[];
   messaggi: MessaggioInviato[];
   todo: Todo[];

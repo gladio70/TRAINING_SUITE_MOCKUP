@@ -1,7 +1,20 @@
 import { useEffect, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import { ATTIVITA, type Attivita, type Cliente } from '../data/types';
+import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente } from '../data/types';
 import type { StatoPagamento } from '../data/logic';
+import { fmtDataBreve } from '../lib/format';
+
+/** Attività con lo stato del servizio (CRM: stati indipendenti per servizio) */
+export function BadgeServizio({ s, breve }: { s: ServizioCliente; breve?: boolean }) {
+  return (
+    <span className={`badge ${s.attivita}`} title={s.nota}>
+      <span className={`dot ${s.attivita}`} />
+      {breve ? ATTIVITA[s.attivita].breve : ATTIVITA[s.attivita].nome}
+      {s.stato !== 'attivo' && <b className={`stato-${STATI[s.stato].badge}`}>· {STATI[s.stato].nome.toLowerCase()}</b>}
+      {s.ripresa && s.stato !== 'terminato' && <span className="muted"> · {fmtDataBreve(s.ripresa)}</span>}
+    </span>
+  );
+}
 
 export function BadgeAttivita({ a, breve }: { a: Attivita; breve?: boolean }) {
   return (
@@ -18,7 +31,7 @@ export function BadgePagamento({ s }: { s: StatoPagamento }) {
 }
 
 export function Avatar({ c, lg }: { c: Cliente; lg?: boolean }) {
-  const a = c.attivita[0];
+  const a = c.servizi[0]?.attivita ?? 'LT';
   return (
     <div className={`avatar ${lg ? 'lg' : ''}`} style={{ background: `var(--${a.toLowerCase()}-soft)`, color: `var(--${a.toLowerCase()})` }}>
       {c.nome[0]}

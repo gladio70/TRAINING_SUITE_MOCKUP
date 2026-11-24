@@ -1,6 +1,7 @@
 // Dati dimostrativi, generati relativamente alla data di oggi così il mockup è sempre "vivo".
-// Nomi e numeri sono inventati.
-import type { Appuntamento, Cliente, Db, Esito, PacchettoCliente, Pagamento, Prodotto } from './types';
+// v0.3: la composizione riprende i numeri delle risposte di Mattia del 24/11/2026 (D-02);
+// nomi, recapiti e prezzi individuali sono INVENTATI (nessun dato reale, nessun contatto Virgin: V-01).
+import type { Appuntamento, Cliente, Costo, Db, Esito, Formula, PacchettoCliente, Pagamento, Presenza, Prodotto, ServizioCliente } from './types';
 import { aggiungiGiorni, inizioGiorno, inizioSettimana, toIsoLocale } from '../lib/format';
 
 const oggi = inizioGiorno();
@@ -10,104 +11,177 @@ const at = (data: Date, h: number, m = 0) => {
   x.setHours(h, m, 0, 0);
   return toIsoLocale(x);
 };
+const isoGiorno = (d: Date) => toIsoLocale(d).slice(0, 10);
 
+// ---------- catalogo (PAC-01) ----------
+// Carnet community: prezzi reali indicati da Mattia (D-07). Gli altri prezzi sono indicativi (tariffa 45–60 €/ora).
+const P = (id: string, attivita: Prodotto['attivita'], nome: string, tipo: Prodotto['tipo'], sessioni: number | undefined, prezzo: number, validitaGiorni: number, extra: Partial<Prodotto> = {}): Prodotto => ({
+  id, attivita, nome, tipo, sessioni, prezzo, validitaGiorni, preavvisoOre: 24, scalaTardiva: true, ...extra,
+});
 const prodotti: Prodotto[] = [
-  { id: 'p-va-pt10', attivita: 'VA', nome: 'PT Virgin – 10 sessioni', tipo: 'pacchetto', sessioni: 10, prezzo: 450, validitaGiorni: 90, preavvisoOre: 24, scalaTardiva: true },
-  { id: 'p-va-sg', attivita: 'VA', nome: 'Small Group Virgin – mensile', tipo: 'smallgroup', sessioni: 8, prezzo: 120, validitaGiorni: 30, preavvisoOre: 12, scalaTardiva: true },
-  { id: 'p-lt-pt10', attivita: 'LT', nome: 'PT Studio – 10 sessioni', tipo: 'pacchetto', sessioni: 10, prezzo: 500, validitaGiorni: 90, preavvisoOre: 24, scalaTardiva: true },
-  { id: 'p-lt-coach', attivita: 'LT', nome: 'Percorso Coaching – 3 mesi', tipo: 'percorso', sessioni: 6, prezzo: 600, validitaGiorni: 90, preavvisoOre: 48, scalaTardiva: false },
-  { id: 'p-lt-online', attivita: 'LT', nome: 'Online – mensile', tipo: 'abbonamento', prezzo: 80, validitaGiorni: 30, preavvisoOre: 24, scalaTardiva: false },
-  { id: 'p-vc-mese', attivita: 'VC', nome: 'Community – abbonamento mensile', tipo: 'abbonamento', prezzo: 60, validitaGiorni: 30, preavvisoOre: 6, scalaTardiva: false },
-  { id: 'p-vc-carnet', attivita: 'VC', nome: 'Community – carnet 10 ingressi', tipo: 'pacchetto', sessioni: 10, prezzo: 120, validitaGiorni: 120, preavvisoOre: 6, scalaTardiva: true },
+  P('va-pt4', 'VA', 'PT Virgin – 4 sessioni', 'pacchetto', 4, 220, 45),
+  P('va-pt8', 'VA', 'PT Virgin – 8 sessioni', 'pacchetto', 8, 400, 45),
+  P('va-pt10', 'VA', 'PT Virgin – 10 sessioni', 'pacchetto', 10, 480, 90),
+  P('va-sing', 'VA', 'PT Virgin – sessione singola', 'pacchetto', 1, 60, 30),
+  P('lt-pt8', 'LT', 'PT Studio – 8 sessioni al mese', 'pacchetto', 8, 400, 35),
+  P('lt-pt4', 'LT', 'PT Studio – 4 sessioni al mese', 'pacchetto', 4, 220, 35),
+  P('lt-scheda2', 'LT', 'Scheda + 2 incontri al mese', 'percorso', 2, 130, 30),
+  P('lt-online2', 'LT', 'Online – 2 videocall al mese', 'percorso', 2, 100, 30),
+  P('lt-scheda', 'LT', 'Scheda su richiesta', 'programmazione', undefined, 70, 30),
+  P('lt-sing', 'LT', 'Sessione singola in studio', 'pacchetto', 1, 55, 30),
+  P('vc-c5', 'VC', 'Carnet 5 sessioni', 'carnet', 5, 50, 30, { preavvisoOre: 0, scalaTardiva: false }),
+  P('vc-c10', 'VC', 'Carnet 10 sessioni', 'carnet', 10, 80, 30, { preavvisoOre: 0, scalaTardiva: false }),
+  P('vc-storico', 'VC', 'Carnet storico', 'carnet', undefined, 0, 365, { preavvisoOre: 0, scalaTardiva: false, nonVendibile: true }),
+  P('vc-prog', 'VC', 'Programmazione aggiuntiva', 'programmazione', undefined, 100, 30, { preavvisoOre: 0, scalaTardiva: false }),
 ];
 
-type C = [string, string, Cliente['attivita'], string];
-const anag: C[] = [
-  ['Giulia', 'Ferri', ['VA'], 'Tonificazione e postura'],
-  ['Marco', 'Bellini', ['VA'], 'Perdere 6 kg entro l’estate'],
-  ['Sara', 'Conti', ['LT'], 'Prima trazione alla sbarra'],
-  ['Luca', 'Moretti', ['LT'], 'Gestione stress e routine'],
-  ['Elena', 'Rinaldi', ['LT', 'VC'], 'Verticale libera'],
-  ['Davide', 'Gallo', ['VA'], 'Rientro dopo infortunio al ginocchio'],
-  ['Chiara', 'Marini', ['LT'], 'Allenamento online 3 volte a settimana'],
-  ['Paolo', 'Esposito', ['VC'], 'Muscle-up'],
-  ['Francesca', 'Romano', ['VA'], 'Forza generale'],
-  ['Andrea', 'Ricci', ['VC'], 'Front lever'],
-  ['Martina', 'Greco', ['LT'], 'Mobilità e flessibilità'],
-  ['Stefano', 'Bruno', ['VA', 'VC'], 'Ricomposizione corporea'],
-  ['Valentina', 'Costa', ['VC'], 'Handstand'],
-  ['Roberto', 'Fontana', ['LT'], 'Coaching carriera e abitudini'],
+// ---------- persone (CRM-01) ----------
+type S = [ServizioCliente['attivita'], ServizioCliente['stato'], number?, string?]; // attività, stato, ripresa (giorni da oggi), nota
+type R = [string, string, string, S[], string, string?];
+const fineMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0);
+const inizioMeseProssimo = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 2);
+const tra = (d: Date) => Math.round((d.getTime() - oggi.getTime()) / 86400000);
+
+const anag: R[] = [
+  // Life Training: 14 persone (7 continuative, 3 in pausa, 2 occasionali, 1 da verificare, 1 interrotta)
+  ['lt1', 'Sara', 'Conti', [['LT', 'attivo'], ['VC', 'attivo']], 'Prima trazione alla sbarra'],
+  ['lt2', 'Luca', 'Moretti', [['LT', 'attivo']], 'Gestione stress e routine'],
+  ['lt3', 'Martina', 'Greco', [['LT', 'attivo']], 'Mobilità e flessibilità'],
+  ['lt4', 'Elena', 'Rinaldi', [['LT', 'attivo'], ['VC', 'attivo']], 'Verticale libera'],
+  ['lt5', 'Roberto', 'Fontana', [['LT', 'attivo']], 'Forza generale con scheda'],
+  ['lt6', 'Chiara', 'Marini', [['LT', 'attivo']], 'Ricomposizione corporea'],
+  ['lt7', 'Giorgia', 'Pellegrini', [['LT', 'attivo']], 'Percorso online continuativo'],
+  ['lt8', 'Simone', 'Ferraro', [['LT', 'pausa', tra(inizioMeseProssimo), 'Rientro previsto il mese prossimo']], 'Ripresa dopo il trasloco'],
+  ['lt9', 'Laura', 'Bianchi', [['LT', 'pausa', 3, 'Pausa per lavoro: risentirsi a fine mese']], 'Postura'],
+  ['lt10', 'Federica', 'Villa', [['LT', 'pausa', -2, 'Doveva richiamare dopo le vacanze']], 'Tonificazione'],
+  ['lt11', 'Matteo', 'Caruso', [['LT', 'occasionale', undefined, 'Circa una sessione ogni due mesi']], 'Mantenimento'],
+  ['lt12', 'Irene', 'De Luca', [['LT', 'occasionale', undefined, 'Online: schede su richiesta']], 'Allenamento in viaggio'],
+  ['lt13', 'Nicola', 'Fabbri', [['LT', 'da verificare', undefined, 'Percorso misto studio/online: definire la formula']], 'Corsa e forza'],
+  ['lt14', 'Davide', 'Gallo', [['LT', 'terminato', undefined, 'Percorso interrotto']], 'Rientro dopo infortunio'],
+  // Virgin Active: 7 acquisiti, 3 acquisti precedenti, 2 in scambio professionale
+  ['va1', 'Giulia', 'Ferri', [['VA', 'attivo']], 'Tonificazione e postura'],
+  ['va2', 'Marco', 'Bellini', [['VA', 'attivo']], 'Perdere 6 kg entro l’estate'],
+  ['va3', 'Francesca', 'Romano', [['VA', 'attivo']], 'Forza generale'],
+  ['va4', 'Alessio', 'Lombardi', [['VA', 'attivo', undefined, 'Pacchetto da rinnovare']], 'Preparazione concorso'],
+  ['va5', 'Stefano', 'Bruno', [['VA', 'da verificare', undefined, 'Dettagli del pacchetto da verificare']], 'Rientro in palestra'],
+  ['va6', 'Paolo', 'Esposito', [['VA', 'attivo']], 'Allenamento con un amico (pacchetto condiviso)'],
+  ['va7', 'Andrea', 'Ricci', [['VA', 'attivo']], 'Allenamento con un amico (pacchetto condiviso)'],
+  ['va8', 'Beatrice', 'Galli', [['VA', 'terminato', undefined, 'Acquisto precedente: sessione singola']], 'Prova'],
+  ['va9', 'Emanuele', 'Riva', [['VA', 'terminato', undefined, 'Acquisto precedente: due sessioni']], 'Tecnica di squat'],
+  ['va10', 'Silvia', 'Marchetti', [['VA', 'terminato', undefined, 'Acquisto precedente: sessione singola']], 'Prova'],
+  ['va11', 'Giovanni', 'Sartori', [['VA', 'attivo', undefined, 'Scambio professionale, inizio la prossima settimana']], 'Forza e mobilità'],
+  ['va12', 'Paola', 'Neri', [['VA', 'attivo', undefined, 'Scambio professionale, inizio la prossima settimana']], 'Forza e mobilità'],
+  // Verticalisthenics Community: 9 carnet (2 sono anche clienti Life), programmazioni aggiuntive, 1 percorso gratuito
+  ['vc1', 'Valerio', 'Testa', [['VC', 'attivo']], 'Muscle-up'],
+  ['vc2', 'Camilla', 'Leone', [['VC', 'attivo']], 'Handstand'],
+  ['vc3', 'Tommaso', 'Rossi', [['VC', 'attivo']], 'Front lever'],
+  ['vc4', 'Giada', 'Ferrari', [['VC', 'attivo']], 'Verticale su pugni'],
+  ['vc5', 'Riccardo', 'Moro', [['VC', 'attivo']], 'Planche'],
+  ['vc6', 'Fabio', 'Serra', [['VC', 'attivo', undefined, 'Carnet storico: mantenere le condizioni concordate']], 'Mantenimento'],
+  ['vc7', 'Marta', 'Lombardo', [['VC', 'attivo', undefined, 'Carnet storico: mantenere le condizioni concordate']], 'Handstand'],
+  ['vc8', 'Pietro', 'Barbieri', [['VC', 'attivo']], 'Programmazione forza'],
+  ['vc9', 'Sofia', 'Mancini', [['VC', 'attivo']], 'Programmazione mobilità'],
+  ['vc10', 'Gabriele', 'Coppola', [['VC', 'da verificare', undefined, 'Programmazione: rinnovo da verificare']], 'Programmazione skill'],
+  ['vc11', 'Elisa', 'Cattaneo', [['VC', 'attivo', undefined, 'Percorso gratuito']], 'Primo muscle-up'],
+  ['vc12', 'Diego', 'Marino', [['VC', 'occasionale', undefined, 'Partecipa senza carnet']], 'Allenamento libero'],
 ];
 
-const clienti: Cliente[] = anag.map(([nome, cognome, attivita, obiettivi], i) => ({
-  id: `c${i + 1}`,
+const clienti: Cliente[] = anag.map(([id, nome, cognome, servizi, obiettivi, note], i) => ({
+  id,
   nome,
   cognome,
   telefono: `+39 34${i % 10} ${String(1000000 + i * 73519).slice(0, 7)}`,
-  email: `${nome.toLowerCase()}.${cognome.toLowerCase()}@esempio.it`,
-  telegram: i % 3 === 0 ? `@${nome.toLowerCase()}${i}` : undefined,
-  attivita,
-  stato: i === 13 ? 'sospeso' : 'attivo',
+  email: `${nome.toLowerCase()}.${cognome.toLowerCase().replace(/\s/g, '')}@esempio.it`,
+  telegram: i % 4 === 0 ? `@${nome.toLowerCase()}${i}` : undefined,
+  servizi: servizi.map(([attivita, stato, rip, nota]) => ({ attivita, stato, ripresa: rip != null ? g(rip) : undefined, nota })),
   obiettivi,
-  note: i === 5 ? 'Evitare carichi assiali pesanti fino a nuova indicazione del fisioterapista.' : '',
-  privacyData: i === 9 ? undefined : g(-60 - i * 5),
-  creatoIl: g(-90 - i * 7),
+  note: note ?? (id === 'lt14' ? 'Evitare carichi assiali pesanti fino a nuova indicazione del fisioterapista.' : ''),
+  privacyData: id === 'vc12' ? undefined : g(-60 - i * 4),
+  creatoIl: g(-90 - i * 6),
 }));
-clienti.push({
-  id: 'c15', nome: 'Alessio', cognome: 'Lombardi', telefono: '+39 333 1234567', email: 'alessio.lombardi@esempio.it',
-  attivita: ['VA'], stato: 'ex', obiettivi: 'Preparazione concorso', note: 'Concluso a settembre.', privacyData: g(-300), creatoIl: g(-320),
-});
 
-// pacchetti: [cliente, prodotto, giorni dall'inizio, usate prima]
-const pk: [string, string, number, number][] = [
-  ['c1', 'p-va-pt10', -70, 6], // poche residue
-  ['c2', 'p-va-pt10', -20, 1],
-  ['c3', 'p-lt-pt10', -80, 5], // scade a breve
-  ['c4', 'p-lt-coach', -40, 2],
-  ['c5', 'p-lt-pt10', -10, 0],
-  ['c5', 'p-vc-mese', -22, 0], // abbonamento in scadenza
-  ['c6', 'p-va-pt10', -45, 4],
-  ['c7', 'p-lt-online', -25, 0], // in scadenza
-  ['c8', 'p-vc-carnet', -60, 7],
-  ['c9', 'p-va-sg', -12, 2],
-  ['c10', 'p-vc-mese', -5, 0],
-  ['c11', 'p-lt-pt10', -30, 3],
-  ['c12', 'p-va-pt10', -85, 7], // scade e poche residue
-  ['c12', 'p-vc-carnet', -15, 1],
-  ['c13', 'p-vc-mese', -28, 0],
+// ---------- pacchetti (PAC-02) ----------
+// [id, titolare, prodotto, inizio (giorni da oggi), usate prima, opzioni]
+type K = [string, string, string, number, number, { formula?: Formula; con?: string[]; tot?: number; storico?: string; prezzo?: number; validita?: number }?];
+const pk: K[] = [
+  ['k-lt1', 'lt1', 'lt-pt8', -18, 2],
+  ['k-lt2', 'lt2', 'lt-pt8', -25, 3],
+  ['k-lt3', 'lt3', 'lt-pt4', -15, 1],
+  ['k-lt4', 'lt4', 'lt-pt4', -8, 0],
+  ['k-lt5', 'lt5', 'lt-scheda2', -12, 0],
+  ['k-lt6', 'lt6', 'lt-scheda2', -26, 1],
+  ['k-lt7', 'lt7', 'lt-online2', -10, 0],
+  ['k-lt8', 'lt8', 'lt-pt4', -70, 4],
+  ['k-lt9', 'lt9', 'lt-pt8', -50, 8],
+  ['k-lt10', 'lt10', 'lt-pt4', -60, 4],
+  ['k-lt11', 'lt11', 'lt-sing', -40, 1],
+  ['k-lt12', 'lt12', 'lt-scheda', -20, 0],
+  ['k-lt14', 'lt14', 'lt-pt8', -95, 5],
+  ['k-va1', 'va1', 'va-pt8', -16, 1],
+  ['k-va2', 'va2', 'va-pt10', -35, 4],
+  ['k-va3', 'va3', 'va-pt4', -12, 0],
+  ['k-va4', 'va4', 'va-pt4', -26, 1],
+  ['k-va5', 'va5', 'va-pt4', -30, 2],
+  ['k-va6', 'va6', 'va-pt4', -10, 0, { con: ['va7'] }],
+  ['k-va8', 'va8', 'va-sing', -110, 1],
+  ['k-va9', 'va9', 'va-sing', -95, 1, { tot: 2, prezzo: 120 }],
+  ['k-va10', 'va10', 'va-sing', -80, 1],
+  ['k-va11', 'va11', 'va-pt10', 4, 0, { formula: 'scambio' }],
+  ['k-va12', 'va12', 'va-pt10', 4, 0, { formula: 'scambio' }],
+  ['k-vc1', 'vc1', 'vc-c5', -32, 2],
+  ['k-vc2', 'vc2', 'vc-c5', -9, 0],
+  ['k-vc-lt1', 'lt1', 'vc-c5', -14, 1],
+  ['k-vc-lt4', 'lt4', 'vc-c10', -20, 3],
+  ['k-vc3', 'vc3', 'vc-c10', -31, 4],
+  ['k-vc4', 'vc4', 'vc-c10', -6, 1],
+  ['k-vc5', 'vc5', 'vc-c10', -24, 2],
+  ['k-vc6', 'vc6', 'vc-storico', -200, 11, { tot: 24, storico: 'Carnet da 24 acquistato prima del 2026: validità estesa', prezzo: 160, validita: 365 }],
+  ['k-vc7', 'vc7', 'vc-storico', -150, 10, { tot: 12, storico: 'Carnet da 12: condizioni concordate a voce', prezzo: 90, validita: 300 }],
+  ['k-vc3p', 'vc3', 'vc-prog', -20, 0],
+  ['k-vc4p', 'vc4', 'vc-prog', -8, 0],
+  ['k-vc8', 'vc8', 'vc-prog', -14, 0],
+  ['k-vc9', 'vc9', 'vc-prog', -27, 0],
+  ['k-vc10', 'vc10', 'vc-prog', -40, 0],
+  ['k-vc11', 'vc11', 'vc-prog', -10, 0, { formula: 'gratuito' }],
 ];
-const pacchetti: PacchettoCliente[] = pk.map(([clienteId, prodottoId, ini, usate], i) => {
+const pacchetti: PacchettoCliente[] = pk.map(([id, clienteId, prodottoId, ini, usate, o = {}]) => {
   const p = prodotti.find((x) => x.id === prodottoId)!;
+  const formula = o.formula ?? 'pagamento';
   return {
-    id: `k${i + 1}`,
-    clienteId,
-    prodottoId,
+    id, clienteId, prodottoId,
+    condivisoCon: o.con,
     inizio: g(ini),
-    scadenza: g(ini + p.validitaGiorni),
-    sessioniTot: p.sessioni,
+    scadenza: g(ini + (o.validita ?? p.validitaGiorni)),
+    sessioniTot: o.tot ?? p.sessioni,
     usatePrima: usate,
-    prezzo: p.prezzo,
+    prezzo: formula === 'pagamento' ? o.prezzo ?? p.prezzo : 0,
+    formula,
+    storico: o.storico,
   };
 });
-const pacchettoDi = (clienteId: string, att: string) =>
-  pacchetti.find((k) => k.clienteId === clienteId && prodotti.find((p) => p.id === k.prodottoId)!.attivita === att);
+const kId = (id: string) => pacchetti.find((k) => k.id === id)!;
 
-// Appuntamenti 1:1 ricorrenti: [cliente, attività, servizio, luogo, giorno settimana (0=lun), ora]
-const slot: [string, 'VA' | 'LT', string, Appuntamento['luogo'], number, number][] = [
-  ['c1', 'VA', 'Personal Training', 'Virgin Active', 0, 7],
-  ['c1', 'VA', 'Personal Training', 'Virgin Active', 3, 7],
-  ['c2', 'VA', 'Personal Training', 'Virgin Active', 1, 13],
-  ['c3', 'LT', 'Personal Training', 'Studio', 1, 18],
-  ['c3', 'LT', 'Personal Training', 'Studio', 4, 18],
-  ['c4', 'LT', 'Coaching', 'Online', 2, 21],
-  ['c5', 'LT', 'Personal Training', 'Studio', 0, 17],
-  ['c6', 'VA', 'Personal Training', 'Virgin Active', 2, 9],
-  ['c6', 'VA', 'Personal Training', 'Virgin Active', 4, 9],
-  ['c7', 'LT', 'Check-in online', 'Online', 3, 20],
-  ['c9', 'VA', 'Personal Training', 'Virgin Active', 0, 12],
-  ['c11', 'LT', 'Personal Training', 'Studio', 2, 17],
-  ['c12', 'VA', 'Personal Training', 'Virgin Active', 1, 8],
-  ['c12', 'VA', 'Personal Training', 'Virgin Active', 3, 8],
+// ---------- appuntamenti (AGE) ----------
+// [cliente, pacchetto, attività, servizio, luogo, giorno settimana (0 = lun), ora, durata, settimane (vuoto = tutte), altri]
+type Slot = [string, string, 'VA' | 'LT', string, Appuntamento['luogo'], number, number, number, number[]?, string[]?];
+const slot: Slot[] = [
+  ['lt1', 'k-lt1', 'LT', 'Personal Training', 'Studio', 1, 18, 60],
+  ['lt1', 'k-lt1', 'LT', 'Personal Training', 'Studio', 4, 18, 60],
+  ['lt2', 'k-lt2', 'LT', 'Personal Training', 'Studio', 0, 19, 60],
+  ['lt2', 'k-lt2', 'LT', 'Personal Training', 'Studio', 3, 19, 60],
+  ['lt3', 'k-lt3', 'LT', 'Personal Training', 'Studio', 2, 17, 60],
+  ['lt4', 'k-lt4', 'LT', 'Personal Training', 'Studio', 0, 17, 60],
+  ['lt5', 'k-lt5', 'LT', 'Incontro + scheda', 'Studio', 3, 20, 60, [-1, 1]],
+  ['lt6', 'k-lt6', 'LT', 'Incontro + scheda', 'Studio', 5, 10, 60, [0, 2]],
+  ['lt7', 'k-lt7', 'LT', 'Videocall', 'Online', 2, 21, 45, [-1, 1]],
+  ['va1', 'k-va1', 'VA', 'Personal Training', 'Virgin Active', 0, 7, 60],
+  ['va1', 'k-va1', 'VA', 'Personal Training', 'Virgin Active', 3, 7, 60],
+  ['va2', 'k-va2', 'VA', 'Personal Training', 'Virgin Active', 1, 13, 60],
+  ['va3', 'k-va3', 'VA', 'Personal Training', 'Virgin Active', 2, 9, 60],
+  ['va4', 'k-va4', 'VA', 'Personal Training', 'Virgin Active', 4, 9, 60],
+  ['va6', 'k-va6', 'VA', 'Personal Training', 'Virgin Active', 3, 12, 60, undefined, ['va7']],
+  ['va11', 'k-va11', 'VA', 'Personal Training', 'Virgin Active', 0, 14, 60, [1, 2]],
+  ['va12', 'k-va12', 'VA', 'Personal Training', 'Virgin Active', 0, 15, 60, [1, 2]],
 ];
 const GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
 
@@ -116,63 +190,105 @@ const lun = inizioSettimana(oggi);
 const ora = new Date();
 const esitoFinto = (i: number): Esito => (i % 11 === 3 ? 'disdetta' : i % 13 === 5 ? 'tardiva' : i % 17 === 7 ? 'assenza' : 'effettuata');
 let n = 0;
+
+// Classi della community con presenze effettive (GRP): chi viene in quali giorni
+const CLASSI: [number, number, string, Appuntamento['luogo']][] = [
+  [0, 19, 'Calisthenics Base', 'Parco'],
+  [2, 19, 'Calisthenics Intermedio', 'Parco'],
+  [4, 19, 'Handstand Lab', 'Studio'],
+  [5, 10, 'Community Open Session', 'Parco'],
+];
+const frequenze: [string, number[]][] = [
+  ['lt1', [2]], ['vc1', [4]], ['vc2', [0, 5]], ['lt4', [0]], ['vc3', [2, 5]], ['vc4', [2, 4]], ['vc5', [0, 2, 4]], ['vc12', [5]],
+];
+const carnetValido = (clienteId: string, giorno: string) =>
+  pacchetti.find((k) => k.clienteId === clienteId && k.prodottoId.startsWith('vc-c') && k.inizio <= giorno && giorno <= k.scadenza);
+
 for (let w = -1; w <= 2; w++) {
-  for (const [clienteId, attivita, servizio, luogo, dow, h] of slot) {
+  for (const [clienteId, pacchettoId, attivita, servizio, luogo, dow, h, durata, settimane, con] of slot) {
+    if (settimane && !settimane.includes(w)) continue;
     const data = aggiungiGiorni(lun, w * 7 + dow);
+    const k = kId(pacchettoId);
+    if (isoGiorno(data) < k.inizio) continue;
     const inizio = at(data, h);
     const passato = new Date(inizio) < ora;
     const ieriOggi = data >= aggiungiGiorni(oggi, -1);
     n++;
     appuntamenti.push({
-      id: `a${n}`,
-      attivita,
-      servizio,
-      luogo,
-      inizio,
-      durataMin: servizio === 'Coaching' ? 60 : servizio === 'Check-in online' ? 30 : 60,
-      clienteId,
-      pacchettoId: pacchettoDi(clienteId, attivita)?.id,
+      id: `a${n}`, attivita, servizio, luogo, inizio, durataMin: durata, clienteId, con, pacchettoId,
       // gli appuntamenti di ieri/oggi già passati restano senza esito: compaiono come "da registrare"
       esito: passato && !ieriOggi ? esitoFinto(n) : undefined,
-      serie: `Ogni ${GIORNI[dow]} alle ${String(h).padStart(2, '0')}:00`,
+      serie: settimane && settimane.length < 4 ? `Ogni due settimane, ${GIORNI[dow]} alle ${h}:00` : `Ogni ${GIORNI[dow]} alle ${String(h).padStart(2, '0')}:00`,
     });
   }
-  // Classi community e small group
-  const classi: [number, number, string, 'VA' | 'VC', Appuntamento['luogo'], number][] = [
-    [0, 19, 'Calisthenics Base', 'VC', 'Parco', 12],
-    [2, 19, 'Calisthenics Intermedio', 'VC', 'Parco', 9],
-    [4, 19, 'Handstand Lab', 'VC', 'Studio', 6],
-    [5, 10, 'Community Open Session', 'VC', 'Parco', 18],
-    [1, 19, 'Small Group Functional', 'VA', 'Virgin Active', 7],
-    [3, 19, 'Small Group Functional', 'VA', 'Virgin Active', 8],
-  ];
-  for (const [dow, h, nome, attivita, luogo, part] of classi) {
+  for (const [dow, h, nome, luogo] of CLASSI) {
     const data = aggiungiGiorni(lun, w * 7 + dow);
+    const giorno = isoGiorno(data);
     const inizio = at(data, h, 30);
+    const giaRegistrata = new Date(inizio) < ora && data < aggiungiGiorni(oggi, -1);
+    const presenze: Presenza[] = giaRegistrata
+      ? frequenze.filter(([, giorni]) => giorni.includes(dow)).map(([clienteId]) => ({ clienteId, pacchettoId: carnetValido(clienteId, giorno)?.id }))
+      : [];
     n++;
     appuntamenti.push({
-      id: `a${n}`, attivita, servizio: attivita === 'VA' ? 'Small Group' : 'Classe', luogo, inizio, durataMin: 75,
-      gruppo: nome, partecipanti: part, esito: new Date(inizio) < ora && data < oggi ? 'effettuata' : undefined,
-      serie: `Ogni ${GIORNI[dow]} alle ${h}:30`,
+      id: `a${n}`, attivita: 'VC', servizio: 'Classe', luogo, inizio, durataMin: 75, gruppo: nome, partecipanti: 12,
+      presenze, esito: giaRegistrata ? 'effettuata' : undefined, serie: `Ogni ${GIORNI[dow]} alle ${h}:30`,
     });
   }
 }
 
+// Body Check gratuiti dei nuovi iscritti Virgin (contatti fittizi: V-01) – 3 programmati e 1 da confermare
+const bc: [number, number, string, boolean?, Esito?][] = [
+  [-5, 11, 'Nuovo iscritto A (contatto fittizio)', false, 'effettuata'],
+  [1, 11, 'Nuovo iscritto B (contatto fittizio)'],
+  [2, 12, 'Nuovo iscritto C (contatto fittizio)'],
+  [3, 10, 'Nuovo iscritto D (contatto fittizio)'],
+  [4, 11, 'Nuovo iscritto E (contatto fittizio)', true],
+];
+for (const [d, h, contatto, daConfermare, esito] of bc) {
+  n++;
+  appuntamenti.push({
+    id: `a${n}`, attivita: 'VA', servizio: 'Body Check', luogo: 'Virgin Active', inizio: at(aggiungiGiorni(oggi, d), h), durataMin: 45,
+    contatto, gratuito: true, daConfermare: daConfermare || undefined, esito,
+  });
+}
+
+// ---------- pagamenti (PAC-04) ----------
 const pagamenti: Pagamento[] = [];
+const speciali: Record<string, (base: Omit<Pagamento, 'id' | 'descrizione' | 'importo' | 'scadenza'>, k: PacchettoCliente, nome: string) => Pagamento[]> = {
+  'k-va1': (b, k, nome) => [
+    { ...b, id: 'pg-va1a', descrizione: `${nome} – acconto`, importo: k.prezzo / 2, scadenza: k.inizio, pagatoIl: k.inizio, metodo: 'bonifico' },
+    { ...b, id: 'pg-va1b', descrizione: `${nome} – saldo`, importo: k.prezzo / 2, scadenza: g(-6) },
+  ],
+  'k-va2': (b, k, nome) => [0, 1, 2].map((i) => ({
+    ...b, id: `pg-va2-${i}`, descrizione: `${nome} – rata ${i + 1}/3`, importo: k.prezzo / 3, scadenza: g(-35 + i * 30),
+    pagatoIl: i === 0 ? k.inizio : i === 1 ? g(-5) : undefined, metodo: i < 2 ? ('bonifico' as const) : undefined,
+  })),
+  'k-lt2': (b, k, nome) => [{ ...b, id: 'pg-lt2', descrizione: nome, importo: k.prezzo, scadenza: g(-3) }],
+  'k-vc2': (b, k, nome) => [{ ...b, id: 'pg-vc2', descrizione: nome, importo: k.prezzo, scadenza: g(0) }],
+  'k-vc8': (b, k, nome) => [{ ...b, id: 'pg-vc8', descrizione: nome, importo: k.prezzo, scadenza: g(2) }],
+  'k-va6': (b, k, nome) => [{ ...b, id: 'pg-va6', descrizione: `${nome} (condiviso)`, importo: k.prezzo, scadenza: k.inizio, pagatoIl: k.inizio, metodo: 'contanti' }],
+};
 pacchetti.forEach((k, i) => {
+  if (k.formula !== 'pagamento') return;
   const p = prodotti.find((x) => x.id === k.prodottoId)!;
+  const nome = k.storico ? `${p.nome} da ${k.sessioniTot}` : p.nome;
   const base = { clienteId: k.clienteId, pacchettoId: k.id, attivita: p.attivita };
-  if (k.prezzo >= 450 && i % 2 === 0) {
-    // acconto + saldo a rate
-    pagamenti.push({ ...base, id: `pg${i}a`, descrizione: `${p.nome} – acconto`, importo: k.prezzo / 2, scadenza: k.inizio, pagatoIl: k.inizio, metodo: 'bonifico' });
-    pagamenti.push({ ...base, id: `pg${i}b`, descrizione: `${p.nome} – saldo`, importo: k.prezzo / 2, scadenza: g(i === 0 ? -6 : i === 2 ? -2 : 9) });
-  } else {
-    pagamenti.push({
-      ...base, id: `pg${i}`, descrizione: p.nome, importo: k.prezzo, scadenza: k.inizio,
-      pagatoIl: i === 7 ? undefined : k.inizio, metodo: i % 3 === 0 ? 'contanti' : i % 3 === 1 ? 'POS' : 'bonifico',
-    });
-  }
+  if (speciali[k.id]) return pagamenti.push(...speciali[k.id](base, k, nome));
+  pagamenti.push({
+    ...base, id: `pg-${k.id}`, descrizione: nome, importo: k.prezzo, scadenza: k.inizio, pagatoIl: k.inizio,
+    metodo: i % 3 === 0 ? 'contanti' : i % 3 === 1 ? 'POS' : 'bonifico',
+  });
 });
+
+// ---------- costi (anteprima ECO-03) ----------
+const primoDelMese = (delta: number) => isoGiorno(new Date(oggi.getFullYear(), oggi.getMonth() + delta, 1));
+const costi: Costo[] = [
+  { id: 'co1', attivita: 'VA', descrizione: 'Affitto sala Virgin Active', categoria: 'affitto', importo: 772.66, data: primoDelMese(-1) },
+  { id: 'co2', attivita: 'VA', descrizione: 'Affitto sala Virgin Active (indicativo)', categoria: 'affitto', importo: 800, data: primoDelMese(0) },
+  { id: 'co3', attivita: 'VC', descrizione: 'Elastici e paralletts', categoria: 'attrezzatura', importo: 45, data: g(-3) },
+  { id: 'co4', descrizione: 'Software e app (comune)', categoria: 'software', importo: 12, data: primoDelMese(0) },
+];
 
 export function creaDbDemo(): Db {
   return {
@@ -181,6 +297,7 @@ export function creaDbDemo(): Db {
     pacchetti,
     appuntamenti,
     pagamenti,
+    costi,
     modelli: [
       { id: 'm-pres', titolo: 'Presentazione', testo: 'Ciao {nome}! Sono Mattia, il tuo coach. Benvenuto/a in {attivita}: ti scrivo qui per organizzare i nostri allenamenti. A presto!' },
       { id: 'm-anam', titolo: 'Questionario anamnesi', testo: 'Ciao {nome}, prima di iniziare ti chiedo di compilare questo breve questionario: {link}. Grazie!' },
@@ -188,15 +305,17 @@ export function creaDbDemo(): Db {
       { id: 'm-conf', titolo: 'Conferma appuntamento', testo: 'Ciao {nome}, confermato: {data} alle {ora} ({luogo}).' },
       { id: 'm-rinn', titolo: 'Rinnovo pacchetto', testo: 'Ciao {nome}, il tuo {pacchetto} sta per terminare ({residue} sessioni residue, scadenza {scadenza}). Vuoi che ti prepari il rinnovo?' },
       { id: 'm-soll', titolo: 'Sollecito pagamento', testo: 'Ciao {nome}, ti ricordo il pagamento di {importo} per {descrizione}, scaduto il {scadenza}. Grazie!' },
+      { id: 'm-ripr', titolo: 'Ripresa allenamenti', testo: 'Ciao {nome}, come stai? Ci eravamo detti di risentirci per riprendere gli allenamenti: ti va di fissare la prossima sessione?' },
       { id: 'm-disd', titolo: 'Regole di disdetta', testo: 'Ciao {nome}, ti ricordo che le sessioni vanno disdette con almeno 24 ore di anticipo; in caso contrario la sessione viene conteggiata.' },
     ],
     messaggi: [],
     todo: [
       { id: 't1', testo: 'Preparare scheda nuova per Sara Conti', data: g(0), fatto: false, attivita: 'LT' },
-      { id: 't2', testo: 'Ordinare elastici per la classe Handstand Lab', data: g(0), fatto: false, attivita: 'VC' },
-      { id: 't3', testo: 'Richiamare contatto Virgin (prova gratuita)', data: g(-1), fatto: false, attivita: 'VA' },
-      { id: 't4', testo: 'Inviare fattura di ottobre al commercialista', data: g(2), fatto: false },
+      { id: 't2', testo: 'Pubblicare gli allenamenti della settimana nel gruppo WhatsApp', data: g(0), fatto: false, attivita: 'VC' },
+      { id: 't3', testo: 'Chiamare i nuovi iscritti assegnati da Virgin', data: g(-1), fatto: false, attivita: 'VA' },
+      { id: 't4', testo: 'Rinnovo identità digitale Aruba', data: isoGiorno(fineMese), fatto: false, categoria: 'amministrazione' },
+      { id: 't5', testo: 'Verifica adempimenti Fiscozen', data: isoGiorno(fineMese), fatto: false, categoria: 'amministrazione' },
     ],
-    soglie: { residueMin: 2, giorniScadenza: 14 },
+    soglie: { residueMin: 2, giorniScadenza: 7 },
   };
 }

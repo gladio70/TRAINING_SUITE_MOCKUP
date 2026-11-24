@@ -1,18 +1,23 @@
-// AGE-01/02/03: scheda appuntamento con esito in un tocco, creazione appuntamento (anche ricorrente)
+// AGE-01/02/03: scheda appuntamento con esito in un tocco, creazione appuntamento (anche ricorrente).
+// v0.3: Body Check gratuiti, appuntamenti da confermare, pacchetti condivisi, presenze alle classi.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Repeat, Users } from 'lucide-react';
+import { Check, MapPin, Repeat, UserCheck, Users } from 'lucide-react';
 import { useStore } from '../data/store';
-import { consuma, nomeCliente, prodottoDi, statoPacchetto } from '../data/logic';
+import { consuma, inCarico, nomeAppuntamento, nomeCliente, prodottoDi, statoPacchetto, titolariDi } from '../data/logic';
 import { ATTIVITA, ESITI, type Appuntamento, type Attivita, type Esito, type Luogo } from '../data/types';
 import { aggiungiGiorni, fmtOra, inizioGiorno, toIsoLocale } from '../lib/format';
 import { Modal } from './ui';
+import { PresenzeModal } from './Presenze';
 
-export function RigaAppuntamento({ a, compatta }: { a: Appuntamento; compatta?: boolean }) {
-  const { db, setEsito } = useStore();
+/** onPresenze: se presente, la finestra delle presenze la apre la pagina (la riga può sparire dalla lista mentre si registra) */
+export function RigaAppuntamento({ a, compatta, onPresenze }: { a: Appuntamento; compatta?: boolean; onPresenze?: (id: string) => void }) {
+  const { db, setEsito, confermaAppuntamento } = useStore();
   const [eccezione, setEccezione] = useState(false);
+  const [presenze, setPresenze] = useState(false);
   const c = a.clienteId ? db.clienti.find((x) => x.id === a.clienteId) : undefined;
   const k = a.pacchettoId ? db.pacchetti.find((x) => x.id === a.pacchettoId) : undefined;
+  const classe = !!a.presenze;
   const stato = k ? statoPacchetto(db, k) : undefined;
   const passato = new Date(a.inizio) < new Date();
   const fine = new Date(new Date(a.inizio).getTime() + a.durataMin * 60000);
@@ -32,13 +37,15 @@ export function RigaAppuntamento({ a, compatta }: { a: Appuntamento; compatta?: 
       </div>
       <div className="info">
         <div style={{ fontWeight: 650 }}>
-          {c ? <Link to={`/clienti/${c.id}`}>{nomeCliente(c)}</Link> : a.gruppo}
-          {a.partecipanti != null && (
+          {c ? <Link to={`/clienti/${c.id}`}>{nomeAppuntamento(db, a)}</Link> : nomeAppuntamento(db, a)}
+          {classe && (
             <span className="small muted">
               {' '}
-              · <Users size={12} /> {a.partecipanti}
+              · <Users size={12} /> {a.presenze!.length} present{a.presenze!.length === 1 ? 'e' : 'i'}
             </span>
           )}
+          {a.gratuito && <span className="badge ok" style={{ marginLeft: 6 }}>gratuito</span>}
+          {a.daConfermare && <span className="badge warn" style={{ marginLeft: 6 }}>da confermare</span>}
         </div>
         <div className="small muted row" style={{ gap: 6 }}>
           <span>{a.servizio}</span>·<MapPin size={12} />
@@ -54,7 +61,20 @@ export function RigaAppuntamento({ a, compatta }: { a: Appuntamento; compatta?: 
           {a.eccezione && <span className="badge warn">Eccezione: {a.eccezione}</span>}
         </div>
       </div>
-      {(passato || a.esito) && (
+      {a.daConfermare && (
+        <div className="esiti">
+          <button className="btn sm" onClick={() => confermaAppuntamento(a.id)}><Check size={14} /> Conferma</button>
+        </div>
+      )}
+      {classe && (
+        <div className="esiti">
+          <button className={`btn sm ${a.presenze!.length ? 'on' : ''}`} onClick={() => (onPresenze ? onPresenze(a.id) : setPresenze(true))}>
+            <UserCheck size={14} /> Presenze{a.presenze!.length ? ` (${a.presenze!.length})` : ''}
+          </button>
+        </div>
+      )}
+      {presenze && <PresenzeModal appuntamentoId={a.id} onClose={() => setPresenze(false)} />}
+      {!classe && !a.daConfermare && (passato || a.esito) && (
         <div className="esiti">
           {(Object.keys(ESITI) as Esito[]).map((e) => (
             <button key={e} className={`btn sm ${a.esito === e ? 'on' : ''}`} onClick={() => scegli(e)} title={ESITI[e]}>
@@ -112,8 +132,10 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
   const base = giorno ?? aggiungiGiorni(inizioGiorno(), 1);
   const [cid, setCid] = useState(clienteId ?? '');
   const cliente = db.clienti.find((c) => c.id === cid);
-  const [att, setAtt] = useState<Attivita>(cliente?.attivita[0] ?? 'LT');
+  const [att, setAtt] = useState<Attivita>(cliente?.servizi[0]?.attivita ?? 'LT');
   const [servizio, setServizio] = useState('Personal Training');
+  const [contatto, setContatto] = useState('');
+  const bodyCheck = servizio === 'Body Check';
   const [luogo, setLuogo] = useState<Luogo>('Studio');
   const [data, setData] = useState(toIsoLocale(base).slice(0, 10));
   const [ora, setOra] = useState('18:00');
@@ -127,12 +149,16 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
     const [h, m] = ora.split(':').map(Number);
     const giornoSett = new Date(`${data}T00:00`).toLocaleDateString('it-IT', { weekday: 'long' });
     const lista: Omit<Appuntamento, 'id'>[] = [];
+    const k = bodyCheck ? undefined : db.pacchetti.find((x) => x.id === (pid || pacchettiCliente[0]?.id));
+    // pacchetto condiviso: nella stessa sessione ci sono anche gli altri titolari
+    const con = k ? titolariDi(k).filter((x) => x !== cid) : [];
     for (let i = 0; i < settimane; i++) {
       const d = aggiungiGiorni(new Date(`${data}T00:00`), i * 7);
       d.setHours(h, m);
       lista.push({
         attivita: att, servizio, luogo, inizio: toIsoLocale(d), durataMin: durata, clienteId: cid || undefined,
-        pacchettoId: pid || pacchettiCliente[0]?.id, serie: settimane > 1 ? `Ogni ${giornoSett} alle ${ora}` : undefined,
+        con: con.length ? con : undefined, contatto: !cid && contatto.trim() ? contatto.trim() : undefined, gratuito: bodyCheck || undefined,
+        pacchettoId: k?.id, serie: settimane > 1 ? `Ogni ${giornoSett} alle ${ora}` : undefined,
       });
     }
     aggiungiAppuntamenti(lista);
@@ -144,7 +170,7 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
       titolo="Nuovo appuntamento"
       onClose={onClose}
       footer={
-        <button className="btn primary" disabled={!cid} onClick={salva}>
+        <button className="btn primary" disabled={!cid && !(bodyCheck && contatto.trim())} onClick={salva}>
           Salva{settimane > 1 ? ` ${settimane} appuntamenti` : ''}
         </button>
       }
@@ -156,13 +182,13 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
         onChange={(e) => {
           setCid(e.target.value);
           const c = db.clienti.find((x) => x.id === e.target.value);
-          if (c) setAtt(c.attivita[0]);
+          if (c) setAtt(c.servizi.find((s) => s.stato !== 'terminato')?.attivita ?? c.servizi[0].attivita);
           setPid('');
         }}
       >
-        <option value="">Scegli…</option>
+        <option value="">{bodyCheck ? 'Nessuno: nuovo contatto' : 'Scegli…'}</option>
         {db.clienti
-          .filter((c) => c.stato === 'attivo')
+          .filter((c) => inCarico(c))
           .sort((a, b) => a.cognome.localeCompare(b.cognome))
           .map((c) => (
             <option key={c.id} value={c.id}>
@@ -183,8 +209,19 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
         </div>
         <div>
           <label className="lbl">Servizio</label>
-          <select className="field" value={servizio} onChange={(e) => setServizio(e.target.value)}>
-            {['Personal Training', 'Coaching', 'Check-in online', 'Small Group', 'Valutazione iniziale'].map((s) => (
+          <select
+            className="field"
+            value={servizio}
+            onChange={(e) => {
+              setServizio(e.target.value);
+              if (e.target.value === 'Body Check') {
+                setAtt('VA');
+                setLuogo('Virgin Active');
+                setDurata(45);
+              }
+            }}
+          >
+            {['Personal Training', 'Body Check', 'Incontro + scheda', 'Videocall', 'Coaching', 'Small Group'].map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -216,15 +253,33 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
           <input className="field" type="time" value={ora} step={900} onChange={(e) => setOra(e.target.value)} />
         </div>
       </div>
-      <label className="lbl">Pacchetto da scalare</label>
-      <select className="field" value={pid} onChange={(e) => setPid(e.target.value)} disabled={!cid}>
-        {pacchettiCliente.length === 0 && <option value="">Nessun pacchetto attivo</option>}
-        {pacchettiCliente.map((k) => (
-          <option key={k.id} value={k.id}>
-            {prodottoDi(db, k).nome} ({statoPacchetto(db, k).residue ?? '∞'} residue)
-          </option>
-        ))}
-      </select>
+      {bodyCheck ? (
+        <>
+          {!cid && (
+            <>
+              <label className="lbl">Nome del contatto</label>
+              <input className="field" value={contatto} onChange={(e) => setContatto(e.target.value)} placeholder="Es. nuovo iscritto assegnato dalla palestra" />
+            </>
+          )}
+          <p className="small muted">Body Check gratuito: nessun pacchetto da scalare, le ore sono contate a parte.</p>
+        </>
+      ) : (
+        <>
+          <label className="lbl">Pacchetto da scalare</label>
+          <select className="field" value={pid} onChange={(e) => setPid(e.target.value)} disabled={!cid}>
+            {pacchettiCliente.length === 0 && <option value="">Nessun pacchetto attivo</option>}
+            {pacchettiCliente.map((k) => {
+              const s = statoPacchetto(db, k);
+              const altri = titolariDi(k).filter((x) => x !== cid).map((x) => nomeCliente(db.clienti.find((c) => c.id === x)));
+              return (
+                <option key={k.id} value={k.id}>
+                  {s.nome} ({s.residue ?? '∞'} residue){altri.length ? ` · condiviso con ${altri.join(', ')}` : ''}
+                </option>
+              );
+            })}
+          </select>
+        </>
+      )}
       <label className="lbl">Ripetizione (AGE-02)</label>
       <select className="field" value={settimane} onChange={(e) => setSettimane(Number(e.target.value))}>
         <option value={1}>Solo questa volta</option>

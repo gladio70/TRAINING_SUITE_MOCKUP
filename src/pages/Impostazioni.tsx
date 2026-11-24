@@ -24,7 +24,8 @@ export function Impostazioni() {
         <div className="card" style={{ margin: 0 }}>
           <h2>Dati dimostrativi</h2>
           <p className="small muted">
-            Questo è un mockup: i dati sono inventati e le modifiche restano salvate solo in questo browser.
+            Questo è un mockup: i dati sono inventati e le modifiche restano salvate solo in questo browser. Dalla versione 0.3 la composizione
+            dei clienti riprende i numeri delle risposte di Mattia (persone, stati, carnet), con nomi e prezzi individuali inventati.
           </p>
           <p className="small muted">
             Versione {etichettaVersione()} del {new Date(VERSIONE.data).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}.

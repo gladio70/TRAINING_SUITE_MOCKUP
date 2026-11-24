@@ -1,9 +1,9 @@
 // DASH-01..05: vista "Oggi" con widget cliccabili, avvisi per priorità, cose da fare, messaggi da inviare
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CalendarClock, ClipboardCheck, Package, Plus, Send, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarClock, ClipboardCheck, Package, PhoneCall, Plus, Send, TrendingUp, Wallet } from 'lucide-react';
 import { useStore } from '../data/store';
-import { calcolaAvvisi, messaggiSuggeriti, nomeCliente, oreAppuntamenti, statoPagamento, statoPacchetto } from '../data/logic';
+import { attivitaDi, calcolaAvvisi, economiaMese, daSeguire, messaggiSuggeriti, nomeCliente, oreAppuntamenti, statoPagamento, statoPacchetto, titolariDi } from '../data/logic';
 import type { Attivita } from '../data/types';
 import { aggiungiGiorni, fmtDataLunga, fmtEuro, inizioGiorno, inizioSettimana, stessoGiorno, toIsoLocale } from '../lib/format';
 import { FiltroAttivita } from '../components/ui';
@@ -26,20 +26,27 @@ export function Dashboard() {
   const avvisi = calcolaAvvisi(db).filter((a) => !a.attivita || ok(a.attivita));
   const suggeriti = messaggiSuggeriti(db).filter((m) => {
     const c = db.clienti.find((x) => x.id === m.clienteId);
-    return filtro === 'tutte' || c?.attivita.includes(filtro);
+    return filtro === 'tutte' || (!!c && attivitaDi(c).includes(filtro));
   });
   const lun = inizioSettimana(oggi);
   const appSett = db.appuntamenti.filter((a) => new Date(a.inizio) >= lun && new Date(a.inizio) < aggiungiGiorni(lun, 7) && ok(a.attivita));
 
   const pacchettiAttenzione = db.pacchetti.filter((k) => {
     const s = statoPacchetto(db, k);
-    const c = db.clienti.find((x) => x.id === k.clienteId);
-    return c?.stato === 'attivo' && ok(s.prodotto.attivita) && ((s.residue != null && s.residue <= db.soglie.residueMin) || s.giorni <= db.soglie.giorniScadenza);
+    const seguito = titolariDi(k).some((id) => daSeguire(db.clienti.find((x) => x.id === id), s.prodotto.attivita));
+    return seguito && !s.scaduto && ok(s.prodotto.attivita) && ((s.residue != null && s.residue <= db.soglie.residueMin) || s.giorni <= db.soglie.giorniScadenza);
   }).length;
   const pagScaduti = db.pagamenti.filter((p) => statoPagamento(p) === 'scaduto' && ok(p.attivita));
   const daRegistrare = avvisi.filter((a) => a.tipo === 'esito').length;
+  const richiami = avvisi.filter((a) => a.tipo === 'richiamo').length;
+  const eco = economiaMese(db);
 
-  const todoOggi = db.todo.filter((t) => (stessoGiorno(t.data, oggi) || (new Date(t.data) < oggi && !t.fatto)) && ok(t.attivita));
+  // cose di oggi, in ritardo e scadenze amministrative della settimana
+  const todoOggi = db.todo.filter(
+    (t) =>
+      (stessoGiorno(t.data, oggi) || (new Date(t.data) < oggi && !t.fatto) || (t.categoria === 'amministrazione' && new Date(t.data) < aggiungiGiorni(oggi, 8))) &&
+      (!t.attivita || ok(t.attivita)),
+  );
 
   return (
     <>
@@ -89,6 +96,16 @@ export function Dashboard() {
           <div className="w-num">{oreAppuntamenti(appSett).toFixed(0)} h</div>
           <div className="w-lbl">carico della settimana · {appSett.length} impegni</div>
         </Link>
+        <Link to="/clienti?stato=pausa" className={`widget ${richiami ? 'warn' : ''}`}>
+          <div className="w-ico"><PhoneCall size={18} /></div>
+          <div className="w-num">{richiami}</div>
+          <div className="w-lbl">persone da richiamare o verificare</div>
+        </Link>
+        <Link to="/economia" className="widget">
+          <div className="w-ico"><TrendingUp size={18} /></div>
+          <div className="w-num">{fmtEuro(eco.righe.filter((r) => ok(r.attivita)).reduce((s, r) => s + r.incassato, 0))}</div>
+          <div className="w-lbl">incassato nel mese · da incassare {fmtEuro(eco.righe.filter((r) => ok(r.attivita)).reduce((s, r) => s + r.daIncassare, 0))}</div>
+        </Link>
       </div>
 
       <div className="grid grid-2">
@@ -113,6 +130,7 @@ export function Dashboard() {
                 <input type="checkbox" checked={t.fatto} onChange={() => toggleTodo(t.id)} />
                 {t.attivita && <span className={`dot ${t.attivita}`} />}
                 <span>{t.testo}</span>
+                {t.categoria === 'amministrazione' && <span className="badge neutral">amministrazione</span>}
                 {new Date(t.data) < oggi && !t.fatto && <span className="badge danger">in ritardo</span>}
               </label>
             ))}

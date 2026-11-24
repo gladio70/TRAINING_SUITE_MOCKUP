@@ -2,12 +2,16 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../data/store';
-import { nomeCliente, statoPacchetto } from '../data/logic';
-import { ATTIVITA, type Attivita, type TipoProdotto } from '../data/types';
+import { daSeguire, FORMULE, nomeCliente, statoPacchetto, titolariDi } from '../data/logic';
+import { ATTIVITA, type Attivita, type PacchettoCliente, type TipoProdotto } from '../data/types';
 import { fmtDataBreve, fmtEuro } from '../lib/format';
 import { BadgeAttivita, FiltroAttivita } from '../components/ui';
+import { ProrogaModal } from './ClienteDettaglio';
 
-const TIPI: Record<TipoProdotto, string> = { pacchetto: 'Pacchetto sessioni', abbonamento: 'Abbonamento', percorso: 'Percorso coaching', smallgroup: 'Small group' };
+const TIPI: Record<TipoProdotto, string> = {
+  pacchetto: 'Pacchetto sessioni', carnet: 'Carnet community', abbonamento: 'Abbonamento', percorso: 'Percorso',
+  smallgroup: 'Small group', programmazione: 'Programmazione / scheda',
+};
 type Filtro = 'attivi' | 'attenzione' | 'conclusi' | 'tutti';
 
 export function Pacchetti() {
@@ -16,13 +20,14 @@ export function Pacchetti() {
   const filtro = (sp.get('filtro') as Filtro) || 'attivi';
   const [tab, setTab] = useState<'clienti' | 'catalogo'>('clienti');
   const [att, setAtt] = useState<Attivita | 'tutte'>('tutte');
+  const [proroga, setProroga] = useState<PacchettoCliente | null>(null);
 
   const righe = db.pacchetti
-    .map((k) => ({ k, s: statoPacchetto(db, k), c: db.clienti.find((x) => x.id === k.clienteId) }))
+    .map((k) => ({ k, s: statoPacchetto(db, k), seguito: titolariDi(k).some((id) => daSeguire(db.clienti.find((x) => x.id === id), statoPacchetto(db, k).prodotto.attivita)) }))
     .filter(({ s }) => att === 'tutte' || s.prodotto.attivita === att)
-    .filter(({ s, c }) => {
-      const attenzione = c?.stato === 'attivo' && !s.scaduto && ((s.residue != null && s.residue <= db.soglie.residueMin) || s.giorni <= db.soglie.giorniScadenza);
-      if (filtro === 'attenzione') return attenzione || (c?.stato === 'attivo' && s.scaduto && s.giorni > -30);
+    .filter(({ s, seguito }) => {
+      const attenzione = seguito && !s.scaduto && ((s.residue != null && s.residue <= db.soglie.residueMin) || s.giorni <= db.soglie.giorniScadenza);
+      if (filtro === 'attenzione') return attenzione || (seguito && s.scaduto && s.giorni > -30);
       if (filtro === 'attivi') return !s.scaduto;
       if (filtro === 'conclusi') return s.scaduto;
       return true;
@@ -66,16 +71,31 @@ export function Pacchetti() {
                 <th>Sessioni</th>
                 <th className="right">Residue</th>
                 <th>Scadenza</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {righe.length === 0 && (
-                <tr><td colSpan={6} className="empty">Nessun pacchetto.</td></tr>
+                <tr><td colSpan={7} className="empty">Nessun pacchetto.</td></tr>
               )}
-              {righe.map(({ k, s, c }) => (
+              {righe.map(({ k, s }) => (
                 <tr key={k.id}>
-                  <td><Link to={`/clienti/${k.clienteId}`} style={{ fontWeight: 600 }}>{nomeCliente(c)}</Link></td>
-                  <td><span className="row" style={{ gap: 6 }}><span className={`dot ${s.prodotto.attivita}`} />{s.prodotto.nome}</span></td>
+                  <td>
+                    {titolariDi(k).map((id, i) => (
+                      <span key={id}>
+                        {i > 0 && ' + '}
+                        <Link to={`/clienti/${id}`} style={{ fontWeight: 600 }}>{nomeCliente(db.clienti.find((x) => x.id === id))}</Link>
+                      </span>
+                    ))}
+                  </td>
+                  <td>
+                    <span className="row" style={{ gap: 6 }}><span className={`dot ${s.prodotto.attivita}`} />{s.nome}</span>
+                    <span className="row" style={{ gap: 4, marginTop: 2 }}>
+                      {k.formula !== 'pagamento' && <span className="badge ok">{FORMULE[k.formula]}</span>}
+                      {k.condivisoCon && <span className="badge neutral">condiviso</span>}
+                      {k.storico && <span className="badge warn" title={k.storico}>storico</span>}
+                    </span>
+                  </td>
                   <td className="small muted">{fmtDataBreve(k.inizio)} → {fmtDataBreve(k.scadenza)}</td>
                   <td style={{ minWidth: 120 }}>
                     {s.residue != null ? (
@@ -100,6 +120,11 @@ export function Pacchetti() {
                       <span className="small muted">tra {s.giorni} g</span>
                     )}
                   </td>
+                  <td className="right">
+                    {(s.residue == null || s.residue > 0) && s.giorni > -60 && (
+                      <button className="btn sm ghost" onClick={() => setProroga(k)}>Proroga</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -116,13 +141,24 @@ export function Pacchetti() {
                   <span className="badge neutral">{TIPI[p.tipo]}</span>
                 </div>
                 <h3 style={{ marginTop: 10 }}>{p.nome}</h3>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, margin: '6px 0' }}>{fmtEuro(p.prezzo)}</div>
-                <div className="small muted">
-                  {p.sessioni ? `${p.sessioni} sessioni` : 'Accesso illimitato'} · validità {p.validitaGiorni} giorni
-                </div>
-                <div className="small" style={{ marginTop: 8 }}>
-                  <b>Disdetta:</b> preavviso {p.preavvisoOre} h · tardiva {p.scalaTardiva ? 'scalata' : 'non scalata'}
-                </div>
+                {p.nonVendibile ? (
+                  <div className="small muted" style={{ margin: '6px 0' }}>Non più in vendita: si mantengono residui e condizioni già concordate.</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, margin: '6px 0' }}>{fmtEuro(p.prezzo)}</div>
+                    <div className="small muted">
+                      {p.sessioni ? `${p.sessioni} sessioni` : 'Senza sessioni da scalare'} · validità {p.validitaGiorni} giorni
+                      {p.tipo === 'carnet' ? ' (modificabile fino a 90, con proroga manuale)' : ''}
+                    </div>
+                    <div className="small" style={{ marginTop: 8 }}>
+                      {p.tipo === 'carnet' ? (
+                        <><b>Pagamento anticipato</b>, frequenza libera: scala una sessione per ogni presenza</>
+                      ) : (
+                        <><b>Disdetta:</b> preavviso {p.preavvisoOre} h · tardiva {p.scalaTardiva ? 'scalata' : 'non scalata'}</>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           <div className="card empty" style={{ margin: 0, borderStyle: 'dashed' }}>
@@ -133,7 +169,9 @@ export function Pacchetti() {
       )}
       <p className="small muted" style={{ marginTop: 12 }}>
         Soglie avvisi: ≤ {db.soglie.residueMin} sessioni residue, scadenza entro {db.soglie.giorniScadenza} giorni (modificabili in Impostazioni). Attività: {Object.values(ATTIVITA).map((a) => a.breve).join(', ')}.
+        Prezzi dei carnet community reali; gli altri prezzi sono indicativi.
       </p>
+      {proroga && <ProrogaModal k={proroga} onClose={() => setProroga(null)} />}
     </>
   );
 }

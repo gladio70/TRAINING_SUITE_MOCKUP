@@ -1,14 +1,18 @@
 // Archivio del mockup: tutto in memoria, salvato nel localStorage del browser.
 // Nella versione reale sarà sostituito dalle API (Cloudflare Workers + D1).
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Appuntamento, Cliente, Db, Esito, MessaggioInviato, PacchettoCliente, Pagamento, Soglie, Todo } from './types';
+import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Soglie, Todo } from './types';
 import { creaDbDemo } from './mock';
+import { carnetAttivo } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
 
-const CHIAVE = 'training_suite-mockup-v1';
+// v0.3 ha cambiato il modello dei dati: i dati salvati con le versioni precedenti non sono compatibili
+const CHIAVE = 'training_suite-mockup-v3';
+const CHIAVI_VECCHIE = ['training_suite-mockup-v1'];
 
 function carica(): Db {
   try {
+    CHIAVI_VECCHIE.forEach((k) => localStorage.removeItem(k));
     const s = localStorage.getItem(CHIAVE);
     if (s) return JSON.parse(s) as Db;
   } catch {
@@ -17,15 +21,26 @@ function carica(): Db {
   return creaDbDemo();
 }
 
+const oggiIso = () => toIsoLocale(new Date()).slice(0, 10);
+
+export interface OpzioniVendita {
+  validitaGiorni: number;
+  formula: Formula;
+  condivisoCon?: string[];
+}
+
 interface Azioni {
   db: Db;
   setEsito: (id: string, esito: Esito | undefined, eccezione?: string) => void;
+  confermaAppuntamento: (id: string) => void;
   aggiungiAppuntamenti: (a: Omit<Appuntamento, 'id'>[]) => void;
+  togglePresenza: (appuntamentoId: string, clienteId: string) => void;
   salvaCliente: (c: Cliente) => void;
   nuovoCliente: (c: Omit<Cliente, 'id' | 'creatoIl'>) => string;
   registraPagamento: (id: string, metodo: Pagamento['metodo']) => void;
   aggiungiPagamento: (p: Omit<Pagamento, 'id'>) => void;
-  vendiPacchetto: (clienteId: string, prodottoId: string, inizio: string, rate: { importo: number; scadenza: string; pagato: boolean }[]) => void;
+  vendiPacchetto: (clienteId: string, prodottoId: string, inizio: string, rate: { importo: number; scadenza: string; pagato: boolean }[], opz: OpzioniVendita) => void;
+  proroga: (pacchettoId: string, giorni: number, nota: string) => void;
   registraMessaggio: (m: Omit<MessaggioInviato, 'id' | 'data'>) => void;
   aggiornaModello: (id: string, testo: string) => void;
   toggleTodo: (id: string) => void;
@@ -51,35 +66,65 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     db,
     setEsito: (id, esito, eccezione) =>
       setDb((d) => ({ ...d, appuntamenti: d.appuntamenti.map((a) => (a.id === id ? { ...a, esito, eccezione: eccezione || undefined } : a)) })),
+    confermaAppuntamento: (id) =>
+      setDb((d) => ({ ...d, appuntamenti: d.appuntamenti.map((a) => (a.id === id ? { ...a, daConfermare: undefined } : a)) })),
     aggiungiAppuntamenti: (lista) =>
       setDb((d) => ({ ...d, appuntamenti: [...d.appuntamenti, ...lista.map((a) => ({ ...a, id: uid() }))] })),
+    // GRP: presenza effettiva a una classe; scala il carnet valido della persona (se c'è)
+    togglePresenza: (appId, clienteId) =>
+      setDb((d) => ({
+        ...d,
+        appuntamenti: d.appuntamenti.map((a) => {
+          if (a.id !== appId) return a;
+          const prima = a.presenze ?? [];
+          const presenze = prima.some((p) => p.clienteId === clienteId)
+            ? prima.filter((p) => p.clienteId !== clienteId)
+            : [...prima, { clienteId, pacchettoId: carnetAttivo(d, clienteId)?.id }];
+          return { ...a, presenze, esito: presenze.length ? 'effettuata' : undefined };
+        }),
+      })),
     salvaCliente: (c) => setDb((d) => ({ ...d, clienti: d.clienti.map((x) => (x.id === c.id ? c : x)) })),
     nuovoCliente: (c) => {
       const id = uid();
-      setDb((d) => ({ ...d, clienti: [...d.clienti, { ...c, id, creatoIl: new Date().toISOString().slice(0, 10) }] }));
+      setDb((d) => ({ ...d, clienti: [...d.clienti, { ...c, id, creatoIl: oggiIso() }] }));
       return id;
     },
     registraPagamento: (id, metodo) =>
-      setDb((d) => ({
-        ...d,
-        pagamenti: d.pagamenti.map((p) => (p.id === id ? { ...p, pagatoIl: new Date().toISOString().slice(0, 10), metodo } : p)),
-      })),
+      setDb((d) => ({ ...d, pagamenti: d.pagamenti.map((p) => (p.id === id ? { ...p, pagatoIl: oggiIso(), metodo } : p)) })),
     aggiungiPagamento: (p) => setDb((d) => ({ ...d, pagamenti: [...d.pagamenti, { ...p, id: uid() }] })),
-    vendiPacchetto: (clienteId, prodottoId, inizio, rate) =>
+    vendiPacchetto: (clienteId, prodottoId, inizio, rate, opz) =>
       setDb((d) => {
         const p = d.prodotti.find((x) => x.id === prodottoId)!;
+        const gratis = opz.formula !== 'pagamento';
         const k: PacchettoCliente = {
-          id: uid(), clienteId, prodottoId, inizio, scadenza: toIsoLocale(aggiungiGiorni(new Date(`${inizio}T00:00`), p.validitaGiorni)).slice(0, 10),
-          sessioniTot: p.sessioni, usatePrima: 0, prezzo: p.prezzo,
+          id: uid(), clienteId, prodottoId, inizio,
+          scadenza: toIsoLocale(aggiungiGiorni(new Date(`${inizio}T00:00`), opz.validitaGiorni)).slice(0, 10),
+          sessioniTot: p.sessioni, usatePrima: 0, prezzo: gratis ? 0 : p.prezzo, formula: opz.formula,
+          condivisoCon: opz.condivisoCon?.length ? opz.condivisoCon : undefined,
         };
-        const oggi = toIsoLocale(new Date()).slice(0, 10);
-        const pag: Pagamento[] = rate.map((r, i) => ({
-          id: uid(), clienteId, pacchettoId: k.id, attivita: p.attivita, importo: r.importo, scadenza: r.scadenza,
-          descrizione: rate.length > 1 ? `${p.nome} – rata ${i + 1}/${rate.length}` : p.nome,
-          pagatoIl: r.pagato ? oggi : undefined, metodo: r.pagato ? 'POS' : undefined,
-        }));
+        const condiviso = k.condivisoCon ? ' (condiviso)' : '';
+        const pag: Pagamento[] = gratis
+          ? []
+          : rate.map((r, i) => ({
+              id: uid(), clienteId, pacchettoId: k.id, attivita: p.attivita, importo: r.importo, scadenza: r.scadenza,
+              descrizione: rate.length > 1 ? `${p.nome}${condiviso} – rata ${i + 1}/${rate.length}` : `${p.nome}${condiviso}`,
+              pagatoIl: r.pagato ? oggiIso() : undefined, metodo: r.pagato ? 'POS' : undefined,
+            }));
         return { ...d, pacchetti: [...d.pacchetti, k], pagamenti: [...d.pagamenti, ...pag] };
       }),
+    proroga: (id, giorni, nota) =>
+      setDb((d) => ({
+        ...d,
+        pacchetti: d.pacchetti.map((k) =>
+          k.id === id
+            ? {
+                ...k,
+                scadenza: toIsoLocale(aggiungiGiorni(new Date(`${k.scadenza}T00:00`), giorni)).slice(0, 10),
+                proroghe: [...(k.proroghe ?? []), { data: oggiIso(), giorni, nota }],
+              }
+            : k,
+        ),
+      })),
     registraMessaggio: (m) =>
       setDb((d) => ({ ...d, messaggi: [...d.messaggi, { ...m, id: uid(), data: new Date().toISOString() }] })),
     aggiornaModello: (id, testo) => setDb((d) => ({ ...d, modelli: d.modelli.map((m) => (m.id === id ? { ...m, testo } : m)) })),

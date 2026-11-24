@@ -1,11 +1,51 @@
-// Regole di business del mockup: residue (PAC-02/03), stato pagamenti (PAC-04), avvisi (DASH-03/05), messaggi suggeriti
-import type { Appuntamento, Attivita, Cliente, Db, PacchettoCliente, Pagamento, Prodotto } from './types';
-import { ATTIVITA } from './types';
+// Regole di business del mockup: residue (PAC-02/03), stato pagamenti (PAC-04), avvisi (DASH-03/05),
+// messaggi suggeriti, stati per servizio (CRM), riepilogo economico del mese (anteprima ECO-02 / DASH-06)
+import type { Appuntamento, Attivita, Cliente, Db, PacchettoCliente, Pagamento, Prodotto, ServizioCliente } from './types';
+import { ATTIVITA, STATI } from './types';
 import { aggiungiGiorni, fmtData, fmtDataBreve, fmtEuro, fmtOra, giorniTra, inizioGiorno, riempi, stessoGiorno } from '../lib/format';
 
 export const nomeCliente = (c?: Cliente) => (c ? `${c.nome} ${c.cognome}` : '—');
 
+// ---------- clienti e servizi ----------
+
+export const attivitaDi = (c: Cliente): Attivita[] => c.servizi.map((s) => s.attivita);
+export const servizioDi = (c: Cliente | undefined, a: Attivita): ServizioCliente | undefined => c?.servizi.find((s) => s.attivita === a);
+/** La persona è ancora in carico per quell'attività (o per almeno una)? */
+export const inCarico = (c: Cliente | undefined, a?: Attivita) =>
+  !!c && c.servizi.some((s) => (!a || s.attivita === a) && s.stato !== 'terminato');
+/** Va seguita con avvisi di residue, scadenze e rinnovi (non in pausa, non terminata, non occasionale) */
+export const daSeguire = (c: Cliente | undefined, a: Attivita) => {
+  const s = servizioDi(c, a);
+  return !!s && (s.stato === 'attivo' || s.stato === 'da verificare');
+};
+
+/** Soglia di residue per l'avviso: i pacchetti piccoli avvisano all'ultima sessione, i percorsi mensili solo alla scadenza */
+export function sogliaResidue(db: Db, k: PacchettoCliente): number | undefined {
+  const p = prodottoDi(db, k);
+  if (k.sessioniTot == null || p.tipo === 'percorso') return undefined;
+  return k.sessioniTot <= 4 ? Math.min(1, db.soglie.residueMin) : db.soglie.residueMin;
+}
+export const etichettaStato = (s: ServizioCliente) => STATI[s.stato].nome;
+
+/** Nome visualizzato di un appuntamento: cliente, persone del pacchetto condiviso, contatto o gruppo */
+export function nomeAppuntamento(db: Db, a: Appuntamento) {
+  if (a.clienteId) {
+    const nomi = [a.clienteId, ...(a.con ?? [])].map((id) => db.clienti.find((c) => c.id === id)).filter(Boolean) as Cliente[];
+    return nomi.map(nomeCliente).join(' + ');
+  }
+  return a.contatto ?? a.gruppo ?? '—';
+}
+
+// ---------- pacchetti ----------
+
 export const prodottoDi = (db: Db, k: PacchettoCliente): Prodotto => db.prodotti.find((p) => p.id === k.prodottoId)!;
+export const titolariDi = (k: PacchettoCliente) => [k.clienteId, ...(k.condivisoCon ?? [])];
+export const pacchettiDi = (db: Db, clienteId: string) => db.pacchetti.filter((k) => titolariDi(k).includes(clienteId));
+
+export function nomePacchetto(db: Db, k: PacchettoCliente) {
+  const p = prodottoDi(db, k);
+  return k.storico ? `${p.nome} da ${k.sessioniTot}` : p.nome;
+}
 
 /** Un appuntamento consuma una sessione del pacchetto? (PAC-03) */
 export function consuma(a: Appuntamento, p?: Prodotto): boolean {
@@ -16,14 +56,32 @@ export function consuma(a: Appuntamento, p?: Prodotto): boolean {
   return false;
 }
 
+/** Sessioni consumate: esiti delle sessioni 1:1 + presenze alle classi registrate sul carnet */
+function sessioniUsate(db: Db, k: PacchettoCliente, p: Prodotto) {
+  const da1a1 = db.appuntamenti.filter((a) => a.pacchettoId === k.id && consuma(a, p)).length;
+  const daClassi = db.appuntamenti.reduce((n, a) => n + (a.presenze?.filter((x) => x.pacchettoId === k.id).length ?? 0), 0);
+  return k.usatePrima + da1a1 + daClassi;
+}
+
 export function statoPacchetto(db: Db, k: PacchettoCliente) {
   const p = prodottoDi(db, k);
-  const usate = k.usatePrima + db.appuntamenti.filter((a) => a.pacchettoId === k.id && consuma(a, p)).length;
-  const residue = k.sessioniTot != null ? k.sessioniTot - usate : undefined;
+  const usate = sessioniUsate(db, k, p);
+  const residue = k.sessioniTot != null ? Math.max(0, k.sessioniTot - usate) : undefined;
   const giorni = giorniTra(new Date(), new Date(k.scadenza));
   const scaduto = giorni < 0 || (residue != null && residue <= 0);
-  return { prodotto: p, usate, residue, giorni, scaduto };
+  return { prodotto: p, usate, residue, giorni, scaduto, nome: nomePacchetto(db, k) };
 }
+
+/** Carnet community valido per una persona (il primo che scade) */
+export function carnetAttivo(db: Db, clienteId: string) {
+  return pacchettiDi(db, clienteId)
+    .filter((k) => prodottoDi(db, k).attivita === 'VC' && k.sessioniTot != null && !statoPacchetto(db, k).scaduto)
+    .sort((a, b) => a.scadenza.localeCompare(b.scadenza))[0];
+}
+
+export const FORMULE: Record<PacchettoCliente['formula'], string> = { pagamento: 'A pagamento', gratuito: 'Gratuito', scambio: 'Scambio professionale' };
+
+// ---------- pagamenti ----------
 
 export type StatoPagamento = 'pagato' | 'da pagare' | 'scaduto';
 export function statoPagamento(pg: Pagamento): StatoPagamento {
@@ -31,10 +89,12 @@ export function statoPagamento(pg: Pagamento): StatoPagamento {
   return new Date(pg.scadenza) < inizioGiorno() ? 'scaduto' : 'da pagare';
 }
 
+// ---------- avvisi ----------
+
 export type Priorita = 0 | 1 | 2; // 0 = scaduto/urgente, 1 = oggi, 2 = settimana
 export interface Avviso {
   id: string;
-  tipo: 'residue' | 'scadenza' | 'pagamento' | 'esito' | 'todo';
+  tipo: 'residue' | 'scadenza' | 'pagamento' | 'esito' | 'todo' | 'richiamo' | 'conferma';
   priorita: Priorita;
   attivita?: Attivita;
   titolo: string;
@@ -49,21 +109,24 @@ export function calcolaAvvisi(db: Db): Avviso[] {
   const cli = (id: string) => db.clienti.find((c) => c.id === id);
 
   for (const k of db.pacchetti) {
-    const c = cli(k.clienteId);
-    if (!c || c.stato !== 'attivo') continue;
     const s = statoPacchetto(db, k);
-    if (s.residue != null && s.residue <= db.soglie.residueMin) {
+    const att = s.prodotto.attivita;
+    const seguiti = titolariDi(k).map(cli).filter((c) => daSeguire(c, att));
+    if (!seguiti.length) continue;
+    const chi = titolariDi(k).map((id) => nomeCliente(cli(id))).join(' + ');
+    const link = `/clienti/${k.clienteId}`;
+    const soglia = sogliaResidue(db, k);
+    if (s.giorni >= 0 && soglia != null && s.residue != null && s.residue <= soglia) {
       out.push({
-        id: `res-${k.id}`, tipo: 'residue', priorita: s.residue <= 0 ? 0 : 1, attivita: s.prodotto.attivita,
-        titolo: `${nomeCliente(c)}: ${s.residue <= 0 ? 'pacchetto esaurito' : `${s.residue} sessioni residue`}`,
-        dettaglio: s.prodotto.nome, link: `/clienti/${c.id}`,
+        id: `res-${k.id}`, tipo: 'residue', priorita: s.residue <= 0 ? 0 : 1, attivita: att,
+        titolo: `${chi}: ${s.residue <= 0 ? 'pacchetto esaurito' : `${s.residue} sessioni residue`}`, dettaglio: s.nome, link,
       });
     }
-    if (s.giorni <= db.soglie.giorniScadenza) {
+    if (s.giorni <= db.soglie.giorniScadenza && s.giorni >= -30 && !(s.residue != null && s.residue <= 0)) {
       out.push({
-        id: `scad-${k.id}`, tipo: 'scadenza', priorita: s.giorni < 0 ? 0 : s.giorni <= 1 ? 1 : 2, attivita: s.prodotto.attivita,
-        titolo: `${nomeCliente(c)}: ${s.giorni < 0 ? 'scaduto' : s.giorni === 0 ? 'scade oggi' : `scade tra ${s.giorni} giorni`}`,
-        dettaglio: `${s.prodotto.nome} · ${fmtDataBreve(k.scadenza)}`, link: `/clienti/${c.id}`,
+        id: `scad-${k.id}`, tipo: 'scadenza', priorita: s.giorni < 0 ? 0 : s.giorni <= 1 ? 1 : 2, attivita: att,
+        titolo: `${chi}: ${s.giorni < 0 ? 'scaduto' : s.giorni === 0 ? 'scade oggi' : `scade tra ${s.giorni} giorni`}`,
+        dettaglio: `${s.nome} · ${fmtDataBreve(k.scadenza)}`, link,
       });
     }
   }
@@ -79,12 +142,47 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     }
   }
   for (const a of db.appuntamenti) {
-    if (!a.esito && new Date(a.inizio) < ora && new Date(a.inizio) >= aggiungiGiorni(oggi, -7)) {
+    const classe = !!a.presenze;
+    if (!a.esito && !classe && new Date(a.inizio) < ora && new Date(a.inizio) >= aggiungiGiorni(oggi, -7)) {
       out.push({
         id: `esi-${a.id}`, tipo: 'esito', priorita: stessoGiorno(a.inizio, oggi) ? 1 : 0, attivita: a.attivita,
-        titolo: `Esito da registrare: ${a.clienteId ? nomeCliente(cli(a.clienteId)) : a.gruppo}`,
+        titolo: `Esito da registrare: ${nomeAppuntamento(db, a)}`,
         dettaglio: `${fmtData(a.inizio)} ${fmtOra(a.inizio)} · ${a.servizio}`, link: `/agenda?giorno=${a.inizio.slice(0, 10)}`,
       });
+    }
+    if (classe && new Date(a.inizio) < ora && a.presenze!.length === 0 && new Date(a.inizio) >= aggiungiGiorni(oggi, -7)) {
+      out.push({
+        id: `pres-${a.id}`, tipo: 'esito', priorita: stessoGiorno(a.inizio, oggi) ? 1 : 0, attivita: a.attivita,
+        titolo: `Presenze da registrare: ${a.gruppo}`, dettaglio: `${fmtData(a.inizio)} ${fmtOra(a.inizio)}`, link: '/community',
+      });
+    }
+    if (a.daConfermare && new Date(a.inizio) >= oggi) {
+      out.push({
+        id: `conf-${a.id}`, tipo: 'conferma', priorita: 1, attivita: a.attivita,
+        titolo: `${a.servizio} da confermare: ${nomeAppuntamento(db, a)}`, dettaglio: `${fmtData(a.inizio)} ${fmtOra(a.inizio)}`,
+        link: `/agenda?giorno=${a.inizio.slice(0, 10)}`,
+      });
+    }
+  }
+  // CRM: riprese e richiami previsti, situazioni da verificare
+  for (const c of db.clienti) {
+    for (const s of c.servizi) {
+      if (s.stato === 'terminato') continue;
+      if (s.ripresa) {
+        const d = giorniTra(oggi, new Date(s.ripresa));
+        if (d <= 7) {
+          out.push({
+            id: `ric-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: s.attivita,
+            titolo: `Richiamare ${nomeCliente(c)}`,
+            dettaglio: `${STATI[s.stato].nome} · ${s.stato === 'pausa' ? 'ripresa prevista' : 'richiamo'} ${fmtDataBreve(s.ripresa)}`, link: `/clienti/${c.id}`,
+          });
+        }
+      } else if (s.stato === 'da verificare') {
+        out.push({
+          id: `ver-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: 2, attivita: s.attivita,
+          titolo: `Da verificare: ${nomeCliente(c)}`, dettaglio: s.nota ?? ATTIVITA[s.attivita].nome, link: `/clienti/${c.id}`,
+        });
+      }
     }
   }
   for (const t of db.todo) {
@@ -93,12 +191,14 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     if (d <= 7) {
       out.push({
         id: `todo-${t.id}`, tipo: 'todo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: t.attivita,
-        titolo: t.testo, dettaglio: d < 0 ? 'In ritardo' : d === 0 ? 'Oggi' : fmtData(t.data), link: '/',
+        titolo: t.testo, dettaglio: `${t.categoria === 'amministrazione' ? 'Amministrazione · ' : ''}${d < 0 ? 'In ritardo' : d === 0 ? 'Oggi' : `entro ${fmtData(t.data)}`}`, link: '/',
       });
     }
   }
   return out.sort((a, b) => a.priorita - b.priorita);
 }
+
+// ---------- messaggi ----------
 
 export interface MessaggioSuggerito {
   chiave: string;
@@ -115,21 +215,31 @@ export function messaggiSuggeriti(db: Db): MessaggioSuggerito[] {
   const inviati = new Set(db.messaggi.map((m) => m.chiave));
   for (const a of db.appuntamenti) {
     if (a.clienteId && stessoGiorno(a.inizio, domani)) {
-      out.push({
-        chiave: `prom-${a.id}`, clienteId: a.clienteId, modelloId: 'm-prom', motivo: `Promemoria di domani ${fmtOra(a.inizio)}`,
-        campi: { data: 'domani', ora: fmtOra(a.inizio), luogo: a.luogo },
-      });
+      for (const id of [a.clienteId, ...(a.con ?? [])]) {
+        out.push({
+          chiave: `prom-${a.id}-${id}`, clienteId: id, modelloId: 'm-prom', motivo: `Promemoria di domani ${fmtOra(a.inizio)}`,
+          campi: { data: 'domani', ora: fmtOra(a.inizio), luogo: a.luogo },
+        });
+      }
     }
   }
   for (const k of db.pacchetti) {
     const s = statoPacchetto(db, k);
     const c = db.clienti.find((x) => x.id === k.clienteId);
-    if (c?.stato !== 'attivo') continue;
-    if ((s.residue != null && s.residue <= db.soglie.residueMin) || (s.giorni >= 0 && s.giorni <= 7)) {
+    if (!daSeguire(c, s.prodotto.attivita) || k.formula !== 'pagamento') continue;
+    const soglia = sogliaResidue(db, k);
+    if (s.giorni >= -7 && ((soglia != null && s.residue != null && s.residue <= soglia) || s.giorni <= 7)) {
       out.push({
-        chiave: `rinn-${k.id}`, clienteId: k.clienteId, modelloId: 'm-rinn', motivo: `Rinnovo: ${s.prodotto.nome}`,
-        campi: { pacchetto: s.prodotto.nome, residue: s.residue != null ? String(s.residue) : '—', scadenza: fmtDataBreve(k.scadenza) },
+        chiave: `rinn-${k.id}`, clienteId: k.clienteId, modelloId: 'm-rinn', motivo: `Rinnovo: ${s.nome}`,
+        campi: { pacchetto: s.nome, residue: s.residue != null ? String(Math.max(s.residue, 0)) : '—', scadenza: fmtDataBreve(k.scadenza) },
       });
+    }
+  }
+  for (const c of db.clienti) {
+    for (const s of c.servizi) {
+      if (s.stato === 'pausa' && s.ripresa && giorniTra(inizioGiorno(), new Date(s.ripresa)) <= 3) {
+        out.push({ chiave: `ripr-${c.id}-${s.attivita}-${s.ripresa}`, clienteId: c.id, modelloId: 'm-ripr', motivo: `Ripresa prevista ${fmtDataBreve(s.ripresa)}`, campi: {} });
+      }
     }
   }
   for (const pg of db.pagamenti) {
@@ -148,7 +258,7 @@ export function testoMessaggio(db: Db, modelloId: string, c: Cliente, campi: Rec
   return riempi(m?.testo ?? '', {
     nome: c.nome,
     cognome: c.cognome,
-    attivita: c.attivita.map((a) => ATTIVITA[a].nome).join(' / '),
+    attivita: attivitaDi(c).map((a) => ATTIVITA[a].nome).join(' / '),
     link: 'https://esempio.it/anamnesi/demo', // dominio ancora da definire (D-09)
     ...campi,
   });
@@ -162,4 +272,54 @@ export function linkInvio(canale: 'WhatsApp' | 'Telegram' | 'Email', c: Cliente,
   return `mailto:${c.email}?subject=${encodeURIComponent(oggetto)}&body=${t}`;
 }
 
+// ---------- ore ed economia ----------
+
 export const oreAppuntamenti = (lista: Appuntamento[]) => lista.reduce((s, a) => s + a.durataMin / 60, 0);
+
+export interface RigaEconomia {
+  attivita: Attivita;
+  venduto: number; // pacchetti venduti nel mese (prezzo pieno)
+  incassato: number;
+  daIncassare: number; // scaduto o in scadenza nel mese, non ancora incassato
+  erogato: number; // valore delle sessioni effettivamente erogate nel mese
+  sessioniGratuite: number; // sessioni erogate gratuite o in scambio
+  costi: number; // costi diretti dell'attività
+  ore: number; // ore di sessione
+  oreGratuite: number; // Body Check e altre attività gratuite
+}
+
+/** Anteprima del prospetto mensile (ECO-02, DASH-06): venduto, incassato, da incassare, erogato, costi, ore */
+export function economiaMese(db: Db, rif = new Date()) {
+  const ini = new Date(rif.getFullYear(), rif.getMonth(), 1);
+  const fin = new Date(rif.getFullYear(), rif.getMonth() + 1, 1);
+  const nel = (iso?: string) => !!iso && new Date(iso) >= ini && new Date(iso) < fin;
+  const ora = new Date();
+
+  const valoreSessione = (k?: PacchettoCliente) => (k && k.formula === 'pagamento' && k.sessioniTot ? k.prezzo / k.sessioniTot : 0);
+  const righe: RigaEconomia[] = (Object.keys(ATTIVITA) as Attivita[]).map((att) => {
+    const r: RigaEconomia = { attivita: att, venduto: 0, incassato: 0, daIncassare: 0, erogato: 0, sessioniGratuite: 0, costi: 0, ore: 0, oreGratuite: 0 };
+    for (const k of db.pacchetti) if (prodottoDi(db, k).attivita === att && nel(k.inizio)) r.venduto += k.prezzo;
+    for (const p of db.pagamenti.filter((x) => x.attivita === att)) {
+      if (nel(p.pagatoIl)) r.incassato += p.importo;
+      if (!p.pagatoIl && (nel(p.scadenza) || new Date(p.scadenza) < ini)) r.daIncassare += p.importo;
+    }
+    for (const a of db.appuntamenti.filter((x) => x.attivita === att && nel(x.inizio) && new Date(x.inizio) < ora)) {
+      const conta = a.esito === 'effettuata' || (!!a.presenze && a.presenze.length > 0);
+      if (conta) (a.gratuito ? (r.oreGratuite += a.durataMin / 60) : (r.ore += a.durataMin / 60));
+      const k = db.pacchetti.find((x) => x.id === a.pacchettoId);
+      if (k && consuma(a, prodottoDi(db, k))) {
+        if (k.formula === 'pagamento') r.erogato += valoreSessione(k);
+        else r.sessioniGratuite++;
+      }
+      for (const pr of a.presenze ?? []) {
+        const kc = db.pacchetti.find((x) => x.id === pr.pacchettoId);
+        if (kc?.formula === 'pagamento') r.erogato += valoreSessione(kc);
+        else if (kc) r.sessioniGratuite++;
+      }
+    }
+    r.costi = db.costi.filter((c) => c.attivita === att && nel(c.data)).reduce((s, c) => s + c.importo, 0);
+    return r;
+  });
+  const costiComuni = db.costi.filter((c) => !c.attivita && nel(c.data)).reduce((s, c) => s + c.importo, 0);
+  return { ini, righe, costiComuni };
+}

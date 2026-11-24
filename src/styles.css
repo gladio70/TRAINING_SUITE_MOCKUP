@@ -289,3 +289,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .aggiornamento .small { color: var(--muted); font-weight: 400; }
 .aggiornamento .gira { animation: gira 1s linear infinite; }
 @keyframes gira { to { transform: rotate(360deg); } }
+
+/* ---------- v0.3: servizi, presenze, ore gratuite ---------- */
+.servizio-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-top: 8px; background: var(--surface-2); }
+.badge .stato-warn { color: var(--warn); font-weight: 700; }
+.badge .stato-danger { color: var(--danger); font-weight: 700; }
+.badge .stato-neutral, .badge .stato-ok { color: var(--muted); font-weight: 700; }
+.ev.free { background-image: repeating-linear-gradient(45deg, transparent 0 6px, rgba(127, 127, 127, 0.12) 6px 12px); }
+.todo.presenza { padding: 8px 4px; border-bottom: 1px solid var(--border); }
+.todo.presenza.on { background: var(--ok-soft); }
+.dot:not(.VA):not(.LT):not(.VC) { background: var(--muted); }

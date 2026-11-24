@@ -1,32 +1,49 @@
-// CRM-01 / CRM-04: elenco clienti con ricerca e filtri; nuovo cliente
+// CRM-01 / CRM-04: elenco clienti con ricerca e filtri; nuovo cliente.
+// Una persona può seguire più servizi, ognuno con il suo stato (risposte di Mattia, D-02).
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Upload } from 'lucide-react';
 import { useStore } from '../data/store';
-import { statoPacchetto } from '../data/logic';
-import { ATTIVITA, type Attivita, type Cliente, type StatoCliente } from '../data/types';
+import { pacchettiDi, statoPacchetto } from '../data/logic';
+import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente, type StatoServizio } from '../data/types';
 import { fmtDataBreve, toIsoLocale } from '../lib/format';
-import { Avatar, BadgeAttivita, FiltroAttivita, Modal } from '../components/ui';
+import { Avatar, BadgeServizio, FiltroAttivita, Modal } from '../components/ui';
+
+type FiltroStato = StatoServizio | 'in carico' | 'tutti';
 
 export function Clienti() {
   const { db } = useStore();
+  const [sp] = useSearchParams();
   const [q, setQ] = useState('');
   const [att, setAtt] = useState<Attivita | 'tutte'>('tutte');
-  const [stato, setStato] = useState<StatoCliente | 'tutti'>('attivo');
+  const [stato, setStato] = useState<FiltroStato>((sp.get('stato') as FiltroStato) || 'in carico');
   const [nuovo, setNuovo] = useState(false);
   const [importa, setImporta] = useState(false);
 
+  // lo stato si valuta sul servizio dell'attività scelta (o su uno qualsiasi se "tutte")
+  const servizi = (c: Cliente) => c.servizi.filter((s) => att === 'tutte' || s.attivita === att);
   const lista = db.clienti
-    .filter((c) => (att === 'tutte' || c.attivita.includes(att)) && (stato === 'tutti' || c.stato === stato))
+    .filter((c) =>
+      servizi(c).some((s) => stato === 'tutti' || (stato === 'in carico' ? s.stato !== 'terminato' : s.stato === stato)),
+    )
     .filter((c) => `${c.nome} ${c.cognome} ${c.email} ${c.telefono}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => a.cognome.localeCompare(b.cognome));
+
+  // persone uniche: chi segue più servizi è contato una volta sola
+  const conteggi = (Object.keys(ATTIVITA) as Attivita[]).map((a) => ({
+    a,
+    n: db.clienti.filter((c) => c.servizi.some((s) => s.attivita === a && s.stato !== 'terminato')).length,
+  }));
+  const uniche = db.clienti.filter((c) => c.servizi.some((s) => s.stato !== 'terminato')).length;
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Clienti</h1>
-          <div className="sub">{lista.length} su {db.clienti.length}</div>
+          <div className="sub">
+            {uniche} persone in carico · {conteggi.map((x) => `${ATTIVITA[x.a].breve} ${x.n}`).join(' · ')} (chi segue più servizi è contato una volta)
+          </div>
         </div>
         <div className="row">
           <button className="btn" onClick={() => setImporta(true)}>
@@ -44,19 +61,21 @@ export function Clienti() {
           <input className="field" placeholder="Cerca nome, email, telefono…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <FiltroAttivita valore={att} onChange={setAtt} />
-        <select className="field" style={{ width: 'auto' }} value={stato} onChange={(e) => setStato(e.target.value as StatoCliente | 'tutti')}>
-          <option value="tutti">Tutti gli stati</option>
-          <option value="attivo">Attivi</option>
-          <option value="sospeso">Sospesi</option>
-          <option value="ex">Ex clienti</option>
+        <select className="field" style={{ width: 'auto' }} value={stato} onChange={(e) => setStato(e.target.value as FiltroStato)}>
+          <option value="in carico">In carico (non terminati)</option>
+          {(Object.keys(STATI) as StatoServizio[]).map((s) => (
+            <option key={s} value={s}>{STATI[s].nome}</option>
+          ))}
+          <option value="tutti">Tutti</option>
         </select>
+        <span className="small muted">{lista.length} risultati</span>
       </div>
 
       <div className="card" style={{ padding: 6 }}>
         <div className="list">
           {lista.length === 0 && <div className="empty">Nessun cliente trovato.</div>}
           {lista.map((c) => {
-            const pk = db.pacchetti.filter((k) => k.clienteId === c.id).map((k) => statoPacchetto(db, k)).filter((s) => !s.scaduto);
+            const pk = pacchettiDi(db, c.id).map((k) => statoPacchetto(db, k)).filter((s) => !s.scaduto);
             const minRes = pk.filter((s) => s.residue != null).map((s) => s.residue!);
             const prossimaScad = pk.map((s) => s.giorni).sort((a, b) => a - b)[0];
             return (
@@ -69,10 +88,9 @@ export function Clienti() {
                   <div className="d">{c.obiettivi}</div>
                 </div>
                 <div className="row" style={{ justifyContent: 'flex-end' }}>
-                  {c.attivita.map((a) => (
-                    <BadgeAttivita key={a} a={a} breve />
+                  {c.servizi.map((s) => (
+                    <BadgeServizio key={s.attivita} s={s} breve />
                   ))}
-                  {c.stato !== 'attivo' && <span className="badge neutral">{c.stato === 'ex' ? 'ex cliente' : 'sospeso'}</span>}
                   {minRes.length > 0 && Math.min(...minRes) <= db.soglie.residueMin && <span className="badge danger">{Math.min(...minRes)} residue</span>}
                   {prossimaScad != null && prossimaScad <= db.soglie.giorniScadenza && <span className="badge warn">scade tra {prossimaScad} g</span>}
                   {!c.privacyData && <span className="badge danger">privacy mancante</span>}
@@ -104,11 +122,15 @@ export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: 
   const { nuovoCliente, salvaCliente } = useStore();
   const nav = useNavigate();
   const [c, setC] = useState<Omit<Cliente, 'id' | 'creatoIl'>>(
-    cliente ?? { nome: '', cognome: '', telefono: '', email: '', telegram: '', attivita: ['LT'], stato: 'attivo', obiettivi: '', note: '', privacyData: undefined },
+    cliente ?? { nome: '', cognome: '', telefono: '', email: '', telegram: '', servizi: [{ attivita: 'LT', stato: 'attivo' }], obiettivi: '', note: '', privacyData: undefined },
   );
   const set = <K extends keyof typeof c>(k: K, v: (typeof c)[K]) => setC((x) => ({ ...x, [k]: v }));
-  const toggleAtt = (a: Attivita) => set('attivita', c.attivita.includes(a) ? c.attivita.filter((x) => x !== a) : [...c.attivita, a]);
-  const valido = c.nome.trim() && c.cognome.trim() && c.attivita.length > 0;
+  const ha = (a: Attivita) => c.servizi.some((s) => s.attivita === a);
+  const toggleAtt = (a: Attivita) =>
+    set('servizi', ha(a) ? c.servizi.filter((s) => s.attivita !== a) : [...c.servizi, { attivita: a, stato: 'attivo' }]);
+  const setServizio = (a: Attivita, v: Partial<ServizioCliente>) =>
+    set('servizi', c.servizi.map((s) => (s.attivita === a ? { ...s, ...v } : s)));
+  const valido = c.nome.trim() && c.cognome.trim() && c.servizi.length > 0;
 
   const salva = () => {
     if (cliente) salvaCliente({ ...cliente, ...c });
@@ -139,23 +161,38 @@ export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: 
           <label className="lbl">Telegram</label>
           <input className="field" value={c.telegram ?? ''} onChange={(e) => set('telegram', e.target.value)} placeholder="@utente" />
         </div>
-        <div>
-          <label className="lbl">Stato</label>
-          <select className="field" value={c.stato} onChange={(e) => set('stato', e.target.value as StatoCliente)}>
-            <option value="attivo">Attivo</option>
-            <option value="sospeso">Sospeso</option>
-            <option value="ex">Ex cliente</option>
-          </select>
-        </div>
       </div>
-      <label className="lbl">Attività * (anche più di una)</label>
+      <label className="lbl">Servizi * (anche più di uno, ognuno con il suo stato)</label>
       <div className="chips">
         {(Object.keys(ATTIVITA) as Attivita[]).map((a) => (
-          <button key={a} type="button" className={`chip ${c.attivita.includes(a) ? 'on' : ''}`} onClick={() => toggleAtt(a)}>
+          <button key={a} type="button" className={`chip ${ha(a) ? 'on' : ''}`} onClick={() => toggleAtt(a)}>
             <span className={`dot ${a}`} /> {ATTIVITA[a].nome}
           </button>
         ))}
       </div>
+      {c.servizi.map((s) => (
+        <div key={s.attivita} className="servizio-box">
+          <div className="row" style={{ gap: 6, fontWeight: 650 }}>
+            <span className={`dot ${s.attivita}`} /> {ATTIVITA[s.attivita].nome}
+          </div>
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label className="lbl">Stato</label>
+              <select className="field" value={s.stato} onChange={(e) => setServizio(s.attivita, { stato: e.target.value as StatoServizio })}>
+                {(Object.keys(STATI) as StatoServizio[]).map((x) => (
+                  <option key={x} value={x}>{STATI[x].nome}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="lbl">{s.stato === 'pausa' ? 'Ripresa prevista' : 'Data di richiamo'}</label>
+              <input className="field" type="date" value={s.ripresa ?? ''} onChange={(e) => setServizio(s.attivita, { ripresa: e.target.value || undefined })} />
+            </div>
+          </div>
+          <input className="field" style={{ marginTop: 8 }} placeholder="Nota sul servizio (es. motivo della pausa)" value={s.nota ?? ''}
+            onChange={(e) => setServizio(s.attivita, { nota: e.target.value || undefined })} />
+        </div>
+      ))}
       <label className="lbl">Obiettivi</label>
       <input className="field" value={c.obiettivi} onChange={(e) => set('obiettivi', e.target.value)} />
       <label className="lbl">Note</label>

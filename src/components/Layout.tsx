@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, Settings, Users, Wallet } from 'lucide-react';
+import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, Settings, TrendingUp, UserCheck, Users, Wallet } from 'lucide-react';
 import { useStore } from '../data/store';
 import { calcolaAvvisi, messaggiSuggeriti } from '../data/logic';
 import { Modal } from './ui';
@@ -12,7 +12,9 @@ const VOCI = [
   { to: '/agenda', label: 'Agenda', icon: CalendarDays, mobile: true },
   { to: '/clienti', label: 'Clienti', icon: Users, mobile: true },
   { to: '/pacchetti', label: 'Pacchetti', icon: Package, mobile: true },
+  { to: '/community', label: 'Community', icon: UserCheck, mobile: false },
   { to: '/pagamenti', label: 'Pagamenti', icon: Wallet, mobile: false },
+  { to: '/economia', label: 'Economia', icon: TrendingUp, mobile: false },
   { to: '/messaggi', label: 'Messaggi', icon: MessageSquare, mobile: false },
   { to: '/impostazioni', label: 'Impostazioni', icon: Settings, mobile: false },
 ];

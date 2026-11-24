@@ -28,12 +28,16 @@ Apre http://localhost:5180. Node.js è portatile in `_toolchain\node` (non serve
 
 | Schermata | Requisiti |
 |---|---|
-| Oggi | DASH-01, 03, 04, 05 – widget cliccabili, avvisi per priorità, cose da fare, messaggi da inviare |
-| Agenda | AGE-01, 02, 03, DASH-02 – giorno/settimana/mese, ricorrenze, esito in un tocco, ore per attività |
-| Clienti | CRM-01, 02, 04 – anagrafica, storico cronologico, ricerca e filtri; CRM-03 solo descritto |
-| Pacchetti | PAC-01, 02, 03 – catalogo, residue scalate dagli esiti, regole di disdetta, eccezione manuale |
+| Oggi | DASH-01, 03, 04, 05 – widget cliccabili, avvisi per priorità, cose da fare (anche scadenze amministrative), messaggi da inviare, persone da richiamare |
+| Agenda | AGE-01, 02, 03, DASH-02 – giorno/settimana/mese, ricorrenze, esito in un tocco, Body Check gratuiti e da confermare, ore per attività (gratuite a parte) |
+| Clienti | CRM-01, 02, 04 – persona unica con più servizi e stato per servizio (attivo, pausa, occasionale, da verificare, terminato), data di ripresa/richiamo, storico; CRM-03 solo descritto |
+| Pacchetti | PAC-01, 02, 03 – catalogo (carnet community 5 = 50 €, 10 = 80 €), residue scalate, pacchetti condivisi, gratuità e scambi, carnet storici, validità configurabile e proroga |
+| Community | GRP / D-07 (proposta di anticipo) – presenze effettive alle classi che scalano il carnet, carnet da rinnovare, programmazioni aggiuntive |
 | Pagamenti | PAC-04, ECO-01 – rate/acconti, stato, incassato e da incassare per attività |
+| Economia | ECO-02/03, DASH-06, V-06 (proposta di anticipo) – venduto, incassato, da incassare, valore erogato, costi, ore ed €/ora indicativo |
 | Messaggi | COM-01, 02 – modelli con campi automatici, invio con un tocco (WhatsApp/Telegram/email), registro |
+
+Dalla v0.3 i dati demo riprendono i numeri delle risposte di Mattia del 24/11/2026 (nomi e prezzi individuali inventati, nessun contatto Virgin reale).
 
 Non ancora presenti: Google Calendar (AGE-04), importazione reale dai Google Sheets (CRM-03), login.
 

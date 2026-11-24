@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useStore } from '../data/store';
-import { nomeCliente, oreAppuntamenti } from '../data/logic';
+import { nomeAppuntamento, oreAppuntamenti } from '../data/logic';
 import { ATTIVITA, type Appuntamento, type Attivita } from '../data/types';
 import { aggiungiGiorni, fmtData, fmtDataLunga, inizioGiorno, inizioSettimana, stessoGiorno } from '../lib/format';
 import { FiltroAttivita, Modal } from '../components/ui';
@@ -54,7 +54,7 @@ export function Agenda() {
 
   if (soloEsiti) {
     const daRegistrare = db.appuntamenti
-      .filter((x) => !x.esito && new Date(x.inizio) < new Date())
+      .filter((x) => !x.esito && !x.presenze?.length && new Date(x.inizio) < new Date())
       .sort((x, y) => y.inizio.localeCompare(x.inizio));
     return (
       <>
@@ -178,12 +178,12 @@ function Settimana({ lun, lista, onApri }: { lun: Date; lista: Appuntamento[]; o
               return (
                 <div
                   key={x.id}
-                  className={`ev ${x.attivita} ${x.esito ? 'done' : ''}`}
+                  className={`ev ${x.attivita} ${x.esito ? 'done' : ''} ${x.gratuito ? 'free' : ''}`}
                   style={{ top: top(d), height: Math.max((x.durataMin / 60) * PX_ORA - 2, 20) }}
                   onClick={() => onApri(x)}
-                  title={`${c ? nomeCliente(c) : x.gruppo} · ${x.servizio} · ${x.luogo}`}
+                  title={`${nomeAppuntamento(db, x)} · ${x.servizio} · ${x.luogo}`}
                 >
-                  <b>{c ? `${c.nome} ${c.cognome[0]}.` : x.gruppo}</b>
+                  <b>{c ? `${c.nome} ${c.cognome[0]}.${x.con?.length ? ' +' + x.con.length : ''}` : x.contatto ?? x.gruppo}</b>
                   {x.servizio}
                 </div>
               );
@@ -227,10 +227,19 @@ function Mese({ mese, lista, onGiorno }: { mese: Date; lista: Appuntamento[]; on
   );
 }
 
-function CaricoOre({ lista }: { lista: Appuntamento[] }) {
+// V-06: le ore di sessione sono separate da quelle gratuite (Body Check); preparazione, amministrazione
+// e spostamenti arriveranno in F2, quando sarà definita l'"ora lavorata"
+function CaricoOre({ lista: tutte }: { lista: Appuntamento[] }) {
+  const lista = tutte.filter((x) => !x.gratuito);
+  const gratuite = oreAppuntamenti(tutte.filter((x) => x.gratuito));
   const tot = oreAppuntamenti(lista);
   return (
     <div className="load">
+      {gratuite > 0 && (
+        <div className="small muted" style={{ marginBottom: 6 }}>
+          Ore di sessione. A parte: Body Check gratuiti {gratuite.toFixed(1).replace('.', ',')} h.
+        </div>
+      )}
       {(Object.keys(ATTIVITA) as Attivita[]).map((att) => {
         const ore = oreAppuntamenti(lista.filter((x) => x.attivita === att));
         return (
