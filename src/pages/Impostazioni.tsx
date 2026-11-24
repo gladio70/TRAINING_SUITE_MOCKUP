@@ -1,11 +1,51 @@
 // Aspetto (tema), soglie degli avvisi (DASH-03) e gestione dei dati dimostrativi.
 // Si apre dalla rotella nella pagina Oggi.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
+import { apertaComeApp, appenaInstallata, installa, installabile, seguiInstallazione, suIPhone } from '../lib/installazione';
 import { useStore } from '../data/store';
 import { VERSIONE, etichettaVersione } from '../lib/versione';
 import { impostaTema, temaAttuale, type Tema } from '../lib/tema';
+
+/** Come è aperta l'app e, se il browser lo consente, pulsante per installarla */
+function StatoInstallazione() {
+  const [, aggiorna] = useState(0);
+  useEffect(() => seguiInstallazione(() => aggiorna((n) => n + 1)), []);
+  const comeApp = apertaComeApp();
+  const sw = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+
+  let stato: string;
+  let spiegazione: string | null = null;
+  if (comeApp) stato = 'Aperta come app installata';
+  else if (appenaInstallata()) stato = 'Installata: aprila dall’icona sulla schermata Home';
+  else {
+    stato = 'Aperta nel browser';
+    if (installabile()) spiegazione = null;
+    else if (suIPhone()) spiegazione = 'Su iPhone: tasto Condividi → “Aggiungi alla schermata Home”.';
+    else
+      spiegazione =
+        'Il browser non propone l’installazione: probabilmente è già installata su questo dispositivo (cerca “Training Suite” tra le app e disinstallala per reinstallarla) oppure usa il menu ⋮ → “Aggiungi a schermata Home” → “Installa”.';
+  }
+
+  return (
+    <div className="stato-installazione">
+      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+        <span className="row" style={{ gap: 6 }}>
+          {comeApp || appenaInstallata() ? <Smartphone size={16} /> : <Globe size={16} />}
+          <b>{stato}</b>
+        </span>
+        {!comeApp && installabile() && (
+          <button className="btn primary sm" onClick={() => installa()}>
+            <Download size={14} /> Installa app
+          </button>
+        )}
+      </div>
+      {spiegazione && <p className="small muted" style={{ margin: '6px 0 0' }}>{spiegazione}</p>}
+      <p className="small muted" style={{ margin: '6px 0 0' }}>Funzionamento senza rete: {sw ? 'attivo' : 'non attivo'}</p>
+    </div>
+  );
+}
 
 export function Impostazioni() {
   const { db, setSoglie, ripristina } = useStore();
@@ -62,6 +102,7 @@ export function Impostazioni() {
             Versione {etichettaVersione()} del {new Date(VERSIONE.data).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}.
             A ogni apertura la app controlla se ne è uscita una nuova e la carica da sola.
           </p>
+          <StatoInstallazione />
           <button className="btn" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>
             Ripristina dati demo
           </button>

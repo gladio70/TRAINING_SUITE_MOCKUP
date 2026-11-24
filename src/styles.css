@@ -394,3 +394,6 @@ button.nuovo-prodotto:hover { border-color: var(--accent); color: var(--text); }
 button.nuovo-prodotto { color: var(--accent); border-color: var(--accent) !important; background: var(--accent-soft); }
 button.nuovo-prodotto .small { color: var(--accent); opacity: 0.85; }
 button.nuovo-prodotto:hover { color: var(--accent); filter: brightness(1.08); }
+
+/* Impostazioni: stato di installazione dell'app */
+.stato-installazione { border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; margin: 10px 0 14px; }

@@ -14,6 +14,10 @@ import { Impostazioni } from './pages/Impostazioni';
 import { Community } from './pages/Community';
 import { Economia } from './pages/Economia';
 import './styles.css';
+import { avviaRilevamentoInstallazione } from './lib/installazione';
+
+// Proposta di installazione del browser: va catturata subito, prima che arrivi l'evento
+avviaRilevamentoInstallazione();
 
 // Service worker: rende l'app installabile (Android) e apribile senza rete. Solo nella versione pubblicata.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
