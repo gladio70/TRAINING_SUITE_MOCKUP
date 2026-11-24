@@ -19,6 +19,9 @@ const fileVersione: Plugin = {
   apply: 'build',
   generateBundle() {
     this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify(versione, null, 2) });
+    // service worker con il codice della build: a ogni pubblicazione cambia, il telefono lo aggiorna e svuota la cache vecchia
+    const sw = readFileSync(new URL('./pwa/sw.js', import.meta.url), 'utf8').replace(/__BUILD__/g, versione.build);
+    this.emitFile({ type: 'asset', fileName: 'sw.js', source: sw });
   },
 };
 

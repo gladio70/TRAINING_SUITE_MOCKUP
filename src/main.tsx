@@ -15,6 +15,15 @@ import { Community } from './pages/Community';
 import { Economia } from './pages/Economia';
 import './styles.css';
 
+// Service worker: rende l'app installabile (Android) e apribile senza rete. Solo nella versione pubblicata.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      /* senza service worker l'app funziona comunque nel browser */
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <StoreProvider>

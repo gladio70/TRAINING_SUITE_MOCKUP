@@ -1,9 +1,13 @@
 {
+  "id": "./",
   "name": "TRAINING SUITE",
   "short_name": "TRAINING SUITE",
+  "description": "Gestionale per i servizi di coaching: clienti, agenda, pacchetti, pagamenti",
   "lang": "it",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#2e3136",
   "theme_color": "#1f2937",
   "icons": [

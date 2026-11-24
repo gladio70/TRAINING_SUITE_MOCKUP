@@ -12,6 +12,10 @@ I dati stanno nel `localStorage` del browser (Impostazioni → *Ripristina dati 
 
 https://gladio70.github.io/TRAINING_SUITE_MOCKUP/ — a ogni push su `main` GitHub Actions (`.github/workflows/pages.yml`) compila il mockup e lo mette nel branch `gh-pages`, che GitHub Pages pubblica (Settings → Pages → Deploy from a branch → `gh-pages` / root).
 
+### Installazione sul telefono (service worker)
+
+`pwa/sw.js` è il modello del service worker: a ogni build `vite.config.ts` lo copia in `dist/sw.js` con il codice della build nel nome della cache. Rende l'app installabile su Android (Chrome e Samsung Internet richiedono un service worker per installarla come app e non come semplice collegamento) e la fa aprire anche senza rete. Pagine: prima la rete, poi la copia; file versionati e icone: prima la copia; `version.json`: sempre dalla rete.
+
 ### Aggiornamenti automatici
 
 Ogni build pubblica `version.json` (numero da `package.json` + commit). All'apertura la app lo rilegge dal server senza cache: se la build è diversa ricarica da sola la pagina con la versione nuova (`?v=<commit>` per scavalcare la cache del telefono). Quando la app torna in primo piano dallo sfondo, invece, mostra un avviso con *Aggiorna* / *Dopo*, per non perdere un modulo compilato a metà. Il numero di versione si vede nella barra laterale, nel menu *Altro* e in Impostazioni. Codice: `src/lib/versione.ts`, `src/components/Aggiornamento.tsx`, plugin in `vite.config.ts`.
