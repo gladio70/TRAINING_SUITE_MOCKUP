@@ -62,7 +62,7 @@ export function Pacchetti() {
 
       {tab === 'clienti' ? (
         <div className="card tbl-wrap" style={{ padding: 0 }}>
-          <table className="tbl">
+          <table className="tbl stack">
             <thead>
               <tr>
                 <th>Cliente</th>
@@ -97,7 +97,7 @@ export function Pacchetti() {
                     </span>
                   </td>
                   <td className="small muted">{fmtDataBreve(k.inizio)} → {fmtDataBreve(k.scadenza)}</td>
-                  <td style={{ minWidth: 120 }}>
+                  <td style={{ minWidth: 120, flex: '1 1 80px' }}>
                     {s.residue != null ? (
                       <div className={`bar ${s.residue <= db.soglie.residueMin ? 'low' : ''}`}>
                         <span style={{ width: `${Math.max(0, (s.residue / (k.sessioniTot || 1)) * 100)}%` }} />

@@ -61,15 +61,16 @@ export function ClienteDettaglio() {
       <Link to="/clienti" className="btn ghost sm" style={{ marginBottom: 8 }}>
         <ArrowLeft size={16} /> Clienti
       </Link>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="row" style={{ gap: 14, alignItems: 'flex-start' }}>
+      <div className="card cli-head" style={{ marginBottom: 16 }}>
           <Avatar c={c} lg />
-          <div style={{ flex: 1, minWidth: 220 }}>
+          <div className="cli-nome">
             <h1>{nomeCliente(c)}</h1>
-            <div className="row" style={{ marginTop: 6 }}>
+            <div className="row" style={{ marginTop: 6, gap: 6 }}>
               {c.servizi.map((s) => <BadgeServizio key={s.attivita} s={s} />)}
               {c.privacyData ? <span className="badge neutral">privacy {fmtDataBreve(c.privacyData)}</span> : <span className="badge danger">consenso privacy mancante</span>}
             </div>
+          </div>
+          <div className="cli-info">
             {c.servizi.filter((s) => s.nota).map((s) => (
               <div key={s.attivita} className="small" style={{ marginTop: 4 }}>
                 <span className={`dot ${s.attivita}`} /> {s.nota}
@@ -83,13 +84,12 @@ export function ClienteDettaglio() {
             {c.obiettivi && <p style={{ margin: '10px 0 0' }}><b>Obiettivi:</b> {c.obiettivi}</p>}
             {c.note && <p className="small" style={{ margin: '4px 0 0' }}><b>Note:</b> {c.note}</p>}
           </div>
-          <div className="row">
+          <div className="cli-azioni">
             <button className="btn wa" onClick={() => setMsg(true)}><Send size={16} /> Messaggio</button>
             <button className="btn" onClick={() => setAppt(true)}><CalendarPlus size={16} /> Appuntamento</button>
-            <button className="btn" onClick={() => setVendi(true)}><ShoppingBag size={16} /> Nuovo pacchetto</button>
+            <button className="btn" onClick={() => setVendi(true)}><ShoppingBag size={16} /> Pacchetto</button>
             <button className="btn" onClick={() => setModifica(true)}><Pencil size={16} /> Modifica</button>
           </div>
-        </div>
       </div>
 
       <div className="grid grid-2">

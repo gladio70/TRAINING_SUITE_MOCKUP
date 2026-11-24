@@ -299,3 +299,52 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .todo.presenza { padding: 8px 4px; border-bottom: 1px solid var(--border); }
 .todo.presenza.on { background: var(--ok-soft); }
 .dot:not(.VA):not(.LT):not(.VC) { background: var(--muted); }
+
+/* ---------- barre di navigazione del periodo (agenda, economia) ---------- */
+.periodo { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
+.toolbar-riga { display: flex; gap: 8px; align-items: center; }
+@media (max-width: 860px) {
+  .toolbar { width: 100%; }
+  .toolbar .tabs { width: 100%; }
+  .toolbar .tabs button { flex: 1; }
+  .toolbar-riga { width: 100%; justify-content: space-between; }
+}
+
+/* ---------- scheda cliente: intestazione ---------- */
+.cli-head { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "av nome azioni" "av info azioni"; gap: 4px 14px; align-items: start; }
+.cli-head > .avatar { grid-area: av; }
+.cli-nome { grid-area: nome; min-width: 0; }
+.cli-info { grid-area: info; min-width: 0; }
+.cli-azioni { grid-area: azioni; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; max-width: 330px; }
+
+@media (max-width: 860px) {
+  /* intestazione: avatar e nome affiancati, poi informazioni e pulsanti a tutta larghezza */
+  .cli-head { grid-template-columns: auto 1fr; grid-template-areas: "av nome" "info info" "azioni azioni"; gap: 8px 12px; }
+  .cli-head > .avatar.lg { width: 48px; height: 48px; font-size: 1.05rem; }
+  .cli-azioni { display: grid; grid-template-columns: 1fr 1fr; max-width: none; margin-top: 6px; }
+  .cli-azioni .btn { justify-content: center; }
+
+  /* righe degli elenchi: se non c'è spazio, badge, importi e pulsanti vanno a capo invece di schiacciare il testo */
+  .item { flex-wrap: wrap; row-gap: 6px; }
+  .item > .grow { flex: 1 1 55%; }
+  .item > .row { margin-left: auto; }
+
+  /* tabelle: su telefono ogni riga diventa una scheda */
+  .tbl.stack thead { display: none; }
+  .tbl.stack, .tbl.stack tbody { display: block; width: 100%; }
+  .tbl.stack tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .tbl.stack tr:last-child { border-bottom: 0; }
+  .tbl.stack td { display: block; padding: 0; border: 0; min-width: 0 !important; }
+  .tbl.stack td:first-child { flex-basis: 100%; }
+  .tbl.stack td.right { margin-left: auto; }
+  .tbl.stack td.pieno { flex-basis: 100%; }
+  .tbl.stack td[data-label]::before { content: attr(data-label) " "; color: var(--muted); font-weight: 400; font-size: 0.78rem; }
+  .tbl.stack tbody tr:hover td { background: none; }
+  .tbl.stack td.empty { flex-basis: 100%; }
+}
+
+/* tabella economia: numeri allineati a destra su computer, griglia a due colonne su telefono */
+.tbl td.cella { text-align: right; }
+@media (max-width: 860px) {
+  .tbl.stack td.cella { flex: 1 1 45%; text-align: left; }
+}

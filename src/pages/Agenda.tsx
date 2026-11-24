@@ -85,7 +85,7 @@ export function Agenda() {
           <h1>Agenda</h1>
           <div className="sub" style={{ textTransform: 'capitalize' }}>{titolo}</div>
         </div>
-        <div className="row">
+        <div className="row toolbar">
           <div className="tabs">
             {(['giorno', 'settimana', 'mese'] as Vista[]).map((v) => (
               <button key={v} className={vista === v ? 'on' : ''} onClick={() => setVista(v)} style={{ textTransform: 'capitalize' }}>
@@ -93,12 +93,16 @@ export function Agenda() {
               </button>
             ))}
           </div>
-          <button className="btn sm" onClick={() => sposta(-1)} aria-label="Precedente"><ChevronLeft size={16} /></button>
-          <button className="btn sm" onClick={() => setRif(inizioGiorno())}>Oggi</button>
-          <button className="btn sm" onClick={() => sposta(1)} aria-label="Successivo"><ChevronRight size={16} /></button>
-          <button className="btn primary" onClick={() => setNuovo(vista === 'giorno' ? rif : aggiungiGiorni(inizioGiorno(), 1))}>
-            <Plus size={16} /> Nuovo
-          </button>
+          <div className="toolbar-riga">
+            <div className="periodo">
+              <button className="btn sm" onClick={() => sposta(-1)} aria-label="Precedente"><ChevronLeft size={16} /></button>
+              <button className="btn sm" onClick={() => setRif(inizioGiorno())}>Oggi</button>
+              <button className="btn sm" onClick={() => sposta(1)} aria-label="Successivo"><ChevronRight size={16} /></button>
+            </div>
+            <button className="btn primary" onClick={() => setNuovo(vista === 'giorno' ? rif : aggiungiGiorni(inizioGiorno(), 1))}>
+              <Plus size={16} /> Nuovo
+            </button>
+          </div>
         </div>
       </div>
 

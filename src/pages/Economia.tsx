@@ -33,7 +33,7 @@ export function Economia() {
           <h1>Economia</h1>
           <div className="sub" style={{ textTransform: 'capitalize' }}>{ini.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</div>
         </div>
-        <div className="row">
+        <div className="periodo">
           <button className="btn sm" onClick={() => sposta(-1)} aria-label="Mese precedente"><ChevronLeft size={16} /></button>
           <button className="btn sm" onClick={() => setRif(new Date())}>Questo mese</button>
           <button className="btn sm" onClick={() => sposta(1)} aria-label="Mese successivo"><ChevronRight size={16} /></button>
@@ -55,7 +55,7 @@ export function Economia() {
       </div>
 
       <div className="card tbl-wrap" style={{ padding: 0 }}>
-        <table className="tbl">
+        <table className="tbl stack">
           <thead>
             <tr>
               <th>Attività</th>
@@ -73,14 +73,14 @@ export function Economia() {
             {righe.map((r) => (
               <tr key={r.attivita}>
                 <td><span className="row" style={{ gap: 6 }}><span className={`dot ${r.attivita}`} />{ATTIVITA[r.attivita].nome}</span></td>
-                <td className="right num">{fmtEuro(r.venduto)}</td>
-                <td className="right num" style={{ fontWeight: 700 }}>{fmtEuro(r.incassato)}</td>
-                <td className="right num">{fmtEuro(r.daIncassare)}</td>
-                <td className="right num">{fmtEuro(r.erogato)}</td>
-                <td className="right num">{r.costi ? fmtEuro(r.costi) : '—'}</td>
-                <td className="right num">{ore(r.ore)}</td>
-                <td className="right num">{r.ore ? fmtEuro((r.incassato - r.costi) / r.ore) : '—'}</td>
-                <td className="small">
+                <td className="num cella" data-label="venduto">{fmtEuro(r.venduto)}</td>
+                <td className="num cella" data-label="incassato" style={{ fontWeight: 700 }}>{fmtEuro(r.incassato)}</td>
+                <td className="num cella" data-label="da incassare">{fmtEuro(r.daIncassare)}</td>
+                <td className="num cella" data-label="erogato">{fmtEuro(r.erogato)}</td>
+                <td className="num cella" data-label="costi">{r.costi ? fmtEuro(r.costi) : '—'}</td>
+                <td className="num cella" data-label="ore">{ore(r.ore)}</td>
+                <td className="num cella" data-label="€/ora">{r.ore ? fmtEuro((r.incassato - r.costi) / r.ore) : '—'}</td>
+                <td className="small pieno">
                   {r.sessioniGratuite ? `${r.sessioniGratuite} sessioni` : ''}
                   {r.sessioniGratuite && r.oreGratuite ? ' · ' : ''}
                   {r.oreGratuite ? `Body Check ${ore(r.oreGratuite)}` : ''}
@@ -90,14 +90,14 @@ export function Economia() {
             ))}
             <tr style={{ fontWeight: 700 }}>
               <td>Totale</td>
-              <td className="right num">{fmtEuro(tot.venduto)}</td>
-              <td className="right num">{fmtEuro(tot.incassato)}</td>
-              <td className="right num">{fmtEuro(tot.daIncassare)}</td>
-              <td className="right num">{fmtEuro(tot.erogato)}</td>
-              <td className="right num">{fmtEuro(tot.costi)}</td>
-              <td className="right num">{ore(tot.ore)}</td>
-              <td className="right num">{tot.ore ? fmtEuro(margine / tot.ore) : '—'}</td>
-              <td className="small">{tot.sessioniGratuite} sessioni · {ore(tot.oreGratuite)}</td>
+              <td className="num cella" data-label="venduto">{fmtEuro(tot.venduto)}</td>
+              <td className="num cella" data-label="incassato">{fmtEuro(tot.incassato)}</td>
+              <td className="num cella" data-label="da incassare">{fmtEuro(tot.daIncassare)}</td>
+              <td className="num cella" data-label="erogato">{fmtEuro(tot.erogato)}</td>
+              <td className="num cella" data-label="costi">{fmtEuro(tot.costi)}</td>
+              <td className="num cella" data-label="ore">{ore(tot.ore)}</td>
+              <td className="num cella" data-label="€/ora">{tot.ore ? fmtEuro(margine / tot.ore) : '—'}</td>
+              <td className="small pieno">{tot.sessioniGratuite} sessioni · {ore(tot.oreGratuite)}</td>
             </tr>
           </tbody>
         </table>

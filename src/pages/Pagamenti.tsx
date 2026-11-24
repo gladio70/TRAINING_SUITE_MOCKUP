@@ -78,7 +78,7 @@ export function Pagamenti() {
       </div>
 
       <div className="card tbl-wrap" style={{ padding: 0 }}>
-        <table className="tbl">
+        <table className="tbl stack">
           <thead>
             <tr>
               <th>Cliente</th>
@@ -96,8 +96,8 @@ export function Pagamenti() {
               return (
                 <tr key={p.id}>
                   <td><Link to={`/clienti/${p.clienteId}`} style={{ fontWeight: 600 }}>{nomeCliente(db.clienti.find((c) => c.id === p.clienteId))}</Link></td>
-                  <td><span className="row" style={{ gap: 6 }}><span className={`dot ${p.attivita}`} />{p.descrizione}</span></td>
-                  <td className="small">{fmtDataBreve(p.scadenza)}</td>
+                  <td className="pieno"><span className="row" style={{ gap: 6 }}><span className={`dot ${p.attivita}`} />{p.descrizione}</span></td>
+                  <td className="small" data-label="scadenza">{fmtDataBreve(p.scadenza)}</td>
                   <td className="right num" style={{ fontWeight: 700 }}>{fmtEuro(p.importo)}</td>
                   <td>
                     <BadgePagamento s={s} />
