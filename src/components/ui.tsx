@@ -1,5 +1,22 @@
 import { useEffect, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
+
+/** Voci visibili nelle liste della pagina Oggi prima di "Mostra altri" */
+export const VOCI_VISIBILI = 5;
+
+/** Pulsante "Mostra altri N" / "Mostra meno" per le liste accorciate; non compare se le voci sono poche */
+export function MostraAltri({ totale, aperto, onToggle, max = VOCI_VISIBILI }: { totale: number; aperto: boolean; onToggle: () => void; max?: number }) {
+  if (totale <= max) return null;
+  return (
+    <button className="btn sm ghost mostra-altri" onClick={onToggle}>
+      {aperto ? (
+        <><ChevronUp size={14} /> Mostra meno</>
+      ) : (
+        <><ChevronDown size={14} /> Mostra altri {totale - max}</>
+      )}
+    </button>
+  );
+}
 import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente } from '../data/types';
 import type { StatoPagamento } from '../data/logic';
 import { fmtDataBreve } from '../lib/format';

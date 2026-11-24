@@ -128,9 +128,9 @@ export function ClienteDettaglio() {
                         <span className="badge neutral">{s.residue === 0 ? 'esaurito' : 'scaduto'}</span>
                       ) : (
                         <>
-                          {s.residue != null && <div style={{ fontWeight: 800, fontSize: '1.2rem' }}>{s.residue}</div>}
+                          {s.residue != null && <div style={{ fontWeight: 700, fontSize: '1.2rem' }}>{s.residue}</div>}
                           <div className="small muted">{s.residue != null ? 'residue' : ''}</div>
-                          {s.giorni <= db.soglie.giorniScadenza && <span className="badge warn">tra {s.giorni} g</span>}
+                          {s.giorni <= db.soglie.giorniScadenza && <span className="badge warn">scade tra {s.giorni} g</span>}
                         </>
                       )}
                       {(s.residue == null || s.residue > 0) && s.giorni > -60 && (
@@ -176,7 +176,7 @@ export function ClienteDettaglio() {
             {prossimi.map((a) => (
               <div key={a.id}>
                 <div className="small muted" style={{ margin: '2px 0 4px' }}>{fmtData(a.inizio)}</div>
-                <RigaAppuntamento a={a} compatta />
+                <RigaAppuntamento a={a} compatta senzaLink />
               </div>
             ))}
           </div>

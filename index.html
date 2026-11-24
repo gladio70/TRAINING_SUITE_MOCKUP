@@ -1,14 +1,23 @@
 <!doctype html>
-<html lang="it">
+<html lang="it" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1f2937" />
+    <meta name="theme-color" content="#12151b" />
+    <meta name="apple-mobile-web-app-title" content="Training Suite" />
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
     <title>TRAINING SUITE</title>
+    <script>
+      // Tema scelto in Impostazioni (scuro predefinito), applicato prima che la pagina venga disegnata
+      try {
+        var tema = localStorage.getItem('training_suite-tema') === 'light' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = tema;
+        document.querySelector('meta[name="theme-color"]').content = tema === 'light' ? '#f4f5f7' : '#12151b';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

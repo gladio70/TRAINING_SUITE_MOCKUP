@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, Settings, TrendingUp, UserCheck, Users, Wallet } from 'lucide-react';
+import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, TrendingUp, UserCheck, Users, Wallet } from 'lucide-react';
 import { useStore } from '../data/store';
 import { calcolaAvvisi, messaggiSuggeriti } from '../data/logic';
 import { Modal } from './ui';
@@ -14,9 +14,9 @@ const VOCI = [
   { to: '/pacchetti', label: 'Pacchetti', icon: Package, mobile: true },
   { to: '/community', label: 'Community', icon: UserCheck, mobile: false },
   { to: '/pagamenti', label: 'Pagamenti', icon: Wallet, mobile: false },
-  { to: '/economia', label: 'Economia', icon: TrendingUp, mobile: false },
+  { to: '/economia', label: 'Report Economico', icon: TrendingUp, mobile: false },
   { to: '/messaggi', label: 'Messaggi', icon: MessageSquare, mobile: false },
-  { to: '/impostazioni', label: 'Impostazioni', icon: Settings, mobile: false },
+  // Impostazioni: si aprono dalla rotella nella pagina Oggi
 ];
 
 export function Layout() {
@@ -27,6 +27,13 @@ export function Layout() {
   const daInviare = messaggiSuggeriti(db).length;
   const badge = (to: string) => (to === '/' ? urgenti : to === '/messaggi' ? daInviare : 0);
   const altroAttivo = VOCI.some((v) => !v.mobile && loc.pathname.startsWith(v.to));
+
+  // Ogni pagina nuova si apre dall'alto (altrimenti resta la posizione di scorrimento della pagina precedente).
+  // Eccezione: "?vai=…" porta a un punto preciso della pagina e gestisce da sé lo scorrimento.
+  useEffect(() => {
+    if (new URLSearchParams(loc.search).has('vai')) return;
+    window.scrollTo(0, 0);
+  }, [loc.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="app">

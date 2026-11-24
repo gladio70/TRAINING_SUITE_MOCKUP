@@ -4,27 +4,34 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Upload } from 'lucide-react';
 import { useStore } from '../data/store';
-import { pacchettiDi, statoPacchetto } from '../data/logic';
+import { daRichiamare, pacchettiDi, statoPacchetto } from '../data/logic';
 import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente, type StatoServizio } from '../data/types';
 import { fmtDataBreve, toIsoLocale } from '../lib/format';
 import { Avatar, BadgeServizio, FiltroAttivita, Modal } from '../components/ui';
 
-type FiltroStato = StatoServizio | 'in carico' | 'tutti';
+type FiltroStato = StatoServizio | 'in carico' | 'da richiamare' | 'tutti';
 
 export function Clienti() {
   const { db } = useStore();
   const [sp] = useSearchParams();
   const [q, setQ] = useState('');
-  const [att, setAtt] = useState<Attivita | 'tutte'>('tutte');
+  const [att, setAtt] = useState<Attivita | 'tutte'>((sp.get('att') as Attivita) || 'tutte');
   const [stato, setStato] = useState<FiltroStato>((sp.get('stato') as FiltroStato) || 'in carico');
   const [nuovo, setNuovo] = useState(false);
   const [importa, setImporta] = useState(false);
 
   // lo stato si valuta sul servizio dell'attività scelta (o su uno qualsiasi se "tutte")
   const servizi = (c: Cliente) => c.servizi.filter((s) => att === 'tutte' || s.attivita === att);
+  // "da richiamare": stessa regola del widget della pagina Oggi e degli avvisi
+  const richiami = daRichiamare(db);
+  const daRichiamareIl = (c: Cliente, s: ServizioCliente) => richiami.some((r) => r.cliente.id === c.id && r.servizio.attivita === s.attivita);
   const lista = db.clienti
     .filter((c) =>
-      servizi(c).some((s) => stato === 'tutti' || (stato === 'in carico' ? s.stato !== 'terminato' : s.stato === stato)),
+      servizi(c).some(
+        (s) =>
+          stato === 'tutti' ||
+          (stato === 'in carico' ? s.stato !== 'terminato' : stato === 'da richiamare' ? daRichiamareIl(c, s) : s.stato === stato),
+      ),
     )
     .filter((c) => `${c.nome} ${c.cognome} ${c.email} ${c.telefono}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => a.cognome.localeCompare(b.cognome));
@@ -63,6 +70,7 @@ export function Clienti() {
         <FiltroAttivita valore={att} onChange={setAtt} />
         <select className="field" style={{ width: 'auto' }} value={stato} onChange={(e) => setStato(e.target.value as FiltroStato)}>
           <option value="in carico">In carico (non terminati)</option>
+          <option value="da richiamare">Da richiamare o verificare</option>
           {(Object.keys(STATI) as StatoServizio[]).map((s) => (
             <option key={s} value={s}>{STATI[s].nome}</option>
           ))}
@@ -172,7 +180,7 @@ export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: 
       </div>
       {c.servizi.map((s) => (
         <div key={s.attivita} className="servizio-box">
-          <div className="row" style={{ gap: 6, fontWeight: 650 }}>
+          <div className="row" style={{ gap: 6, fontWeight: 600 }}>
             <span className={`dot ${s.attivita}`} /> {ATTIVITA[s.attivita].nome}
           </div>
           <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 10 }}>

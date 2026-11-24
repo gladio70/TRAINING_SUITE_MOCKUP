@@ -120,7 +120,7 @@ export function Community() {
                       )}
                     </div>
                     <div className="right">
-                      <div style={{ fontWeight: 800 }}>{s.residue}</div>
+                      <div style={{ fontWeight: 700 }}>{s.residue}</div>
                       <div className="small muted">residue</div>
                       <div className="row" style={{ gap: 4, justifyContent: 'flex-end', marginTop: 4 }}>
                         {s.residue !== 0 && (
@@ -147,7 +147,7 @@ export function Community() {
                     <div className="t"><Link to={`/clienti/${k.clienteId}`}>{nome(k.clienteId)}</Link></div>
                     <div className="d">{k.formula === 'gratuito' ? 'Percorso gratuito' : s.nome} · {s.giorni < 0 ? 'scaduta' : `fino al ${fmtDataBreve(k.scadenza)}`}</div>
                   </div>
-                  {s.giorni >= 0 && s.giorni <= db.soglie.giorniScadenza && <span className="badge warn">tra {s.giorni} g</span>}
+                  {s.giorni >= 0 && s.giorni <= db.soglie.giorniScadenza && <span className="badge warn">scade tra {s.giorni} g</span>}
                   {s.giorni < 0 && <span className="badge neutral">da rinnovare</span>}
                 </div>
               ))}

@@ -1,7 +1,7 @@
 // Archivio del mockup: tutto in memoria, salvato nel localStorage del browser.
 // Nella versione reale sarà sostituito dalle API (Cloudflare Workers + D1).
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Soglie, Todo } from './types';
+import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, Todo } from './types';
 import { creaDbDemo } from './mock';
 import { carnetAttivo } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
@@ -14,7 +14,12 @@ function carica(): Db {
   try {
     CHIAVI_VECCHIE.forEach((k) => localStorage.removeItem(k));
     const s = localStorage.getItem(CHIAVE);
-    if (s) return JSON.parse(s) as Db;
+    if (s) {
+      const db = JSON.parse(s) as Db;
+      // v0.3.6: la cosa da fare demo su Sara Conti ora porta alla sua scheda (dati salvati prima non hanno il collegamento)
+      db.todo = db.todo.map((t) => (t.id === 't1' && !t.clienteId && t.testo.includes('Sara Conti') ? { ...t, clienteId: 'lt1' } : t));
+      return db;
+    }
   } catch {
     /* storage non disponibile: si riparte dai dati demo */
   }
@@ -41,6 +46,7 @@ interface Azioni {
   aggiungiPagamento: (p: Omit<Pagamento, 'id'>) => void;
   vendiPacchetto: (clienteId: string, prodottoId: string, inizio: string, rate: { importo: number; scadenza: string; pagato: boolean }[], opz: OpzioniVendita) => void;
   proroga: (pacchettoId: string, giorni: number, nota: string) => void;
+  aggiungiProdotto: (p: Omit<Prodotto, 'id'>) => void;
   registraMessaggio: (m: Omit<MessaggioInviato, 'id' | 'data'>) => void;
   aggiornaModello: (id: string, testo: string) => void;
   toggleTodo: (id: string) => void;
@@ -125,6 +131,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : k,
         ),
       })),
+    // PAC-01: nuovo prodotto nel catalogo (pacchetto, carnet, abbonamento…)
+    aggiungiProdotto: (p) => setDb((d) => ({ ...d, prodotti: [...d.prodotti, { ...p, id: uid() }] })),
     registraMessaggio: (m) =>
       setDb((d) => ({ ...d, messaggi: [...d.messaggi, { ...m, id: uid(), data: new Date().toISOString() }] })),
     aggiornaModello: (id, testo) => setDb((d) => ({ ...d, modelli: d.modelli.map((m) => (m.id === id ? { ...m, testo } : m)) })),

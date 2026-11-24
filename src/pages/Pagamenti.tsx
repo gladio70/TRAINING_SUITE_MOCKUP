@@ -1,6 +1,7 @@
 // PAC-04 + ECO-01 + anteprima DASH-06: pagamenti registrati a mano, stato, incassato / da incassare per attività
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '../data/store';
 import { nomeCliente, statoPagamento } from '../data/logic';
 import { ATTIVITA, type Attivita, type MetodoPagamento, type Pagamento } from '../data/types';
@@ -15,13 +16,18 @@ export function Pagamenti() {
   const filtro = (sp.get('filtro') as Filtro) || 'tutti';
   const [att, setAtt] = useState<Attivita | 'tutte'>('tutte');
   const [incassa, setIncassa] = useState<Pagamento | null>(null);
+  const [rif, setRif] = useState(() => new Date());
 
-  const ora = new Date();
-  const meseIni = new Date(ora.getFullYear(), ora.getMonth(), 1);
-  const meseFin = new Date(ora.getFullYear(), ora.getMonth() + 1, 1);
+  // mese scelto con le frecce (come nel Report Economico)
+  const meseIni = new Date(rif.getFullYear(), rif.getMonth(), 1);
+  const meseFin = new Date(rif.getFullYear(), rif.getMonth() + 1, 1);
   const delMese = (iso?: string) => !!iso && new Date(iso) >= meseIni && new Date(iso) < meseFin;
+  const sposta = (d: number) => setRif(new Date(meseIni.getFullYear(), meseIni.getMonth() + d, 1));
+  // da incassare nel mese: non pagati con scadenza nel mese o già scaduti prima (stessa regola del Report Economico)
+  const apertoNelMese = (p: Pagamento) => !p.pagatoIl && (delMese(p.scadenza) || new Date(p.scadenza) < meseIni);
 
   const lista = db.pagamenti
+    .filter((p) => delMese(p.scadenza) || delMese(p.pagatoIl) || apertoNelMese(p))
     .filter((p) => att === 'tutte' || p.attivita === att)
     .filter((p) => {
       const s = statoPagamento(p);
@@ -37,7 +43,7 @@ export function Pagamenti() {
     return {
       a,
       incassato: pp.filter((p) => delMese(p.pagatoIl)).reduce((s, p) => s + p.importo, 0),
-      daIncassare: pp.filter((p) => !p.pagatoIl && (delMese(p.scadenza) || new Date(p.scadenza) < ora)).reduce((s, p) => s + p.importo, 0),
+      daIncassare: pp.filter(apertoNelMese).reduce((s, p) => s + p.importo, 0),
     };
   });
   const tot = riepilogo.reduce((s, r) => ({ incassato: s.incassato + r.incassato, daIncassare: s.daIncassare + r.daIncassare }), { incassato: 0, daIncassare: 0 });
@@ -47,7 +53,12 @@ export function Pagamenti() {
       <div className="page-head">
         <div>
           <h1>Pagamenti</h1>
-          <div className="sub" style={{ textTransform: 'capitalize' }}>{ora.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</div>
+          <div className="sub" style={{ textTransform: 'capitalize' }}>{meseIni.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div className="periodo">
+          <button className="btn sm" onClick={() => sposta(-1)} aria-label="Mese precedente"><ChevronLeft size={16} /></button>
+          <button className="btn sm" onClick={() => setRif(new Date())}>Questo mese</button>
+          <button className="btn sm" onClick={() => sposta(1)} aria-label="Mese successivo"><ChevronRight size={16} /></button>
         </div>
       </div>
 

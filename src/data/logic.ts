@@ -27,6 +27,27 @@ export function sogliaResidue(db: Db, k: PacchettoCliente): number | undefined {
 }
 export const etichettaStato = (s: ServizioCliente) => STATI[s.stato].nome;
 
+/**
+ * Persone da richiamare o verificare: servizi non terminati con ripresa/richiamo entro 7 giorni (o già passata),
+ * oppure "da verificare" senza data. Usata da avvisi, widget della pagina Oggi e filtro della pagina Clienti.
+ */
+export function daRichiamare(db: Db) {
+  const oggi = inizioGiorno();
+  const out: { cliente: Cliente; servizio: ServizioCliente; giorni?: number }[] = [];
+  for (const cliente of db.clienti) {
+    for (const servizio of cliente.servizi) {
+      if (servizio.stato === 'terminato') continue;
+      if (servizio.ripresa) {
+        const giorni = giorniTra(oggi, new Date(servizio.ripresa));
+        if (giorni <= 7) out.push({ cliente, servizio, giorni });
+      } else if (servizio.stato === 'da verificare') {
+        out.push({ cliente, servizio });
+      }
+    }
+  }
+  return out;
+}
+
 /** Nome visualizzato di un appuntamento: cliente, persone del pacchetto condiviso, contatto o gruppo */
 export function nomeAppuntamento(db: Db, a: Appuntamento) {
   if (a.clienteId) {
@@ -164,25 +185,19 @@ export function calcolaAvvisi(db: Db): Avviso[] {
       });
     }
   }
-  // CRM: riprese e richiami previsti, situazioni da verificare
-  for (const c of db.clienti) {
-    for (const s of c.servizi) {
-      if (s.stato === 'terminato') continue;
-      if (s.ripresa) {
-        const d = giorniTra(oggi, new Date(s.ripresa));
-        if (d <= 7) {
-          out.push({
-            id: `ric-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: s.attivita,
-            titolo: `Richiamare ${nomeCliente(c)}`,
-            dettaglio: `${STATI[s.stato].nome} · ${s.stato === 'pausa' ? 'ripresa prevista' : 'richiamo'} ${fmtDataBreve(s.ripresa)}`, link: `/clienti/${c.id}`,
-          });
-        }
-      } else if (s.stato === 'da verificare') {
-        out.push({
-          id: `ver-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: 2, attivita: s.attivita,
-          titolo: `Da verificare: ${nomeCliente(c)}`, dettaglio: s.nota ?? ATTIVITA[s.attivita].nome, link: `/clienti/${c.id}`,
-        });
-      }
+  // CRM: riprese e richiami previsti, situazioni da verificare (stessa regola del widget e del filtro Clienti)
+  for (const { cliente: c, servizio: s, giorni: d } of daRichiamare(db)) {
+    if (s.ripresa && d != null) {
+      out.push({
+        id: `ric-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: s.attivita,
+        titolo: `Richiamare ${nomeCliente(c)}`,
+        dettaglio: `${STATI[s.stato].nome} · ${s.stato === 'pausa' ? 'ripresa prevista' : 'richiamo'} ${fmtDataBreve(s.ripresa)}`, link: `/clienti/${c.id}`,
+      });
+    } else {
+      out.push({
+        id: `ver-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: 2, attivita: s.attivita,
+        titolo: `Da verificare: ${nomeCliente(c)}`, dettaglio: s.nota ?? ATTIVITA[s.attivita].nome, link: `/clienti/${c.id}`,
+      });
     }
   }
   for (const t of db.todo) {
@@ -191,7 +206,9 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     if (d <= 7) {
       out.push({
         id: `todo-${t.id}`, tipo: 'todo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: t.attivita,
-        titolo: t.testo, dettaglio: `${t.categoria === 'amministrazione' ? 'Amministrazione · ' : ''}${d < 0 ? 'In ritardo' : d === 0 ? 'Oggi' : `entro ${fmtData(t.data)}`}`, link: '/',
+        titolo: t.testo, dettaglio: `${t.categoria === 'amministrazione' ? 'Amministrazione · ' : ''}${d < 0 ? 'In ritardo' : d === 0 ? 'Oggi' : `entro ${fmtData(t.data)}`}`,
+        // con un cliente si apre la sua scheda; altrimenti la pagina Oggi scorre al riquadro "Cose da fare"
+        link: t.clienteId ? `/clienti/${t.clienteId}` : '/?vai=cose-da-fare',
       });
     }
   }
@@ -322,4 +339,50 @@ export function economiaMese(db: Db, rif = new Date()) {
   });
   const costiComuni = db.costi.filter((c) => !c.attivita && nel(c.data)).reduce((s, c) => s + c.importo, 0);
   return { ini, righe, costiComuni };
+}
+
+// ---------- dettaglio del report economico (voci dietro ogni widget) ----------
+
+export interface VoceErogata {
+  data: string;
+  chi: string;
+  clienteId?: string;
+  servizio: string;
+  pacchetto: string;
+  valore: number; // 0 per sessioni gratuite o in scambio
+  formula: PacchettoCliente['formula'];
+  attivita: Attivita;
+}
+
+/** Elenchi del mese per il report economico: stesse regole di economiaMese, voce per voce */
+export function dettaglioMese(db: Db, rif = new Date()) {
+  const ini = new Date(rif.getFullYear(), rif.getMonth(), 1);
+  const fin = new Date(rif.getFullYear(), rif.getMonth() + 1, 1);
+  const nel = (iso?: string) => !!iso && new Date(iso) >= ini && new Date(iso) < fin;
+  const ora = new Date();
+  const cli = (id: string) => db.clienti.find((c) => c.id === id);
+  const perData = <T,>(f: (x: T) => string) => (a: T, b: T) => f(a).localeCompare(f(b));
+
+  const venduti = db.pacchetti
+    .filter((k) => nel(k.inizio))
+    .map((k) => ({ k, nome: nomePacchetto(db, k), chi: titolariDi(k).map((id) => nomeCliente(cli(id))).join(' + '), attivita: prodottoDi(db, k).attivita }))
+    .sort(perData((x) => x.k.inizio));
+  const incassati = db.pagamenti.filter((p) => nel(p.pagatoIl)).sort(perData((p) => p.pagatoIl!));
+  const daIncassare = db.pagamenti.filter((p) => !p.pagatoIl && (nel(p.scadenza) || new Date(p.scadenza) < ini)).sort(perData((p) => p.scadenza));
+
+  const erogate: VoceErogata[] = [];
+  const valore = (k: PacchettoCliente) => (k.formula === 'pagamento' && k.sessioniTot ? k.prezzo / k.sessioniTot : 0);
+  for (const a of db.appuntamenti.filter((x) => nel(x.inizio) && new Date(x.inizio) < ora)) {
+    const k = db.pacchetti.find((x) => x.id === a.pacchettoId);
+    if (k && consuma(a, prodottoDi(db, k))) {
+      erogate.push({ data: a.inizio, chi: nomeAppuntamento(db, a), clienteId: a.clienteId, servizio: a.servizio, pacchetto: nomePacchetto(db, k), valore: valore(k), formula: k.formula, attivita: a.attivita });
+    }
+    for (const pr of a.presenze ?? []) {
+      const kc = db.pacchetti.find((x) => x.id === pr.pacchettoId);
+      if (kc) erogate.push({ data: a.inizio, chi: nomeCliente(cli(pr.clienteId)), clienteId: pr.clienteId, servizio: a.gruppo ?? a.servizio, pacchetto: nomePacchetto(db, kc), valore: valore(kc), formula: kc.formula, attivita: a.attivita });
+    }
+  }
+  erogate.sort(perData((x) => x.data));
+  const costi = db.costi.filter((c) => nel(c.data)).sort(perData((c) => c.data));
+  return { venduti, incassati, daIncassare, erogate, costi };
 }

@@ -310,7 +310,7 @@ export function creaDbDemo(): Db {
     ],
     messaggi: [],
     todo: [
-      { id: 't1', testo: 'Preparare scheda nuova per Sara Conti', data: g(0), fatto: false, attivita: 'LT' },
+      { id: 't1', testo: 'Preparare scheda nuova per Sara Conti', data: g(0), fatto: false, attivita: 'LT', clienteId: 'lt1' },
       { id: 't2', testo: 'Pubblicare gli allenamenti della settimana nel gruppo WhatsApp', data: g(0), fatto: false, attivita: 'VC' },
       { id: 't3', testo: 'Chiamare i nuovi iscritti assegnati da Virgin', data: g(-1), fatto: false, attivita: 'VA' },
       { id: 't4', testo: 'Rinnovo identità digitale Aruba', data: isoGiorno(fineMese), fatto: false, categoria: 'amministrazione' },

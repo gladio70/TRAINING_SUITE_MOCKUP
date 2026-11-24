@@ -60,7 +60,7 @@ export function Agenda() {
       <>
         <div className="page-head">
           <div>
-            <h1>Esiti da registrare</h1>
+            <h1>Eventi da registrare</h1>
             <div className="sub">Sessioni passate senza esito: un tocco per registrarle (AGE-03)</div>
           </div>
           <button className="btn" onClick={() => setSp({})}>Torna all’agenda</button>

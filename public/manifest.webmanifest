@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "TRAINING SUITE",
-  "short_name": "TRAINING SUITE",
+  "name": "Training Suite",
+  "short_name": "Training Suite",
   "description": "Gestionale per i servizi di coaching: clienti, agenda, pacchetti, pagamenti",
   "lang": "it",
   "start_url": "./",

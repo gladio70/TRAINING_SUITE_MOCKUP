@@ -11,7 +11,13 @@ import { Modal } from './ui';
 import { PresenzeModal } from './Presenze';
 
 /** onPresenze: se presente, la finestra delle presenze la apre la pagina (la riga può sparire dalla lista mentre si registra) */
-export function RigaAppuntamento({ a, compatta, onPresenze }: { a: Appuntamento; compatta?: boolean; onPresenze?: (id: string) => void }) {
+export function RigaAppuntamento({ a, compatta, onPresenze, senzaLink }: {
+  a: Appuntamento;
+  compatta?: boolean;
+  onPresenze?: (id: string) => void;
+  /** nella scheda del cliente il nome non porta da nessuna parte (sarebbe la stessa scheda) */
+  senzaLink?: boolean;
+}) {
   const { db, setEsito, confermaAppuntamento } = useStore();
   const [eccezione, setEccezione] = useState(false);
   const [presenze, setPresenze] = useState(false);
@@ -31,13 +37,13 @@ export function RigaAppuntamento({ a, compatta, onPresenze }: { a: Appuntamento;
     <div className={`appt ${a.attivita} ${a.esito ? 'done' : ''}`}>
       <div className="ora">
         {fmtOra(a.inizio)}
-        <div className="small muted" style={{ fontWeight: 500 }}>
+        <div className="small muted" style={{ fontWeight: 400 }}>
           {fmtOra(toIsoLocale(fine))}
         </div>
       </div>
       <div className="info">
-        <div style={{ fontWeight: 650 }}>
-          {c ? <Link to={`/clienti/${c.id}`}>{nomeAppuntamento(db, a)}</Link> : nomeAppuntamento(db, a)}
+        <div style={{ fontWeight: 600 }}>
+          {c && !senzaLink ? <Link to={`/clienti/${c.id}`}>{nomeAppuntamento(db, a)}</Link> : nomeAppuntamento(db, a)}
           {classe && (
             <span className="small muted">
               {' '}

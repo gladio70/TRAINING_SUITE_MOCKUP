@@ -1,12 +1,83 @@
 // PAC-01..03: catalogo prodotti per attività e pacchetti dei clienti con residue e scadenze
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { useStore } from '../data/store';
 import { daSeguire, FORMULE, nomeCliente, statoPacchetto, titolariDi } from '../data/logic';
-import { ATTIVITA, type Attivita, type PacchettoCliente, type TipoProdotto } from '../data/types';
+import { ATTIVITA, type Attivita, type PacchettoCliente, type Prodotto, type TipoProdotto } from '../data/types';
 import { fmtDataBreve, fmtEuro } from '../lib/format';
-import { BadgeAttivita, FiltroAttivita } from '../components/ui';
+import { BadgeAttivita, FiltroAttivita, Modal } from '../components/ui';
 import { ProrogaModal } from './ClienteDettaglio';
+
+// tipi senza sessioni da scalare: si usano a tempo (validità), non a sessioni
+const SENZA_SESSIONI: TipoProdotto[] = ['abbonamento', 'programmazione'];
+
+/** PAC-01: nuovo prodotto nel catalogo. Dopo il salvataggio si può vendere dalla scheda cliente ("Pacchetto"). */
+function NuovoProdotto({ attivita, onClose }: { attivita: Attivita; onClose: () => void }) {
+  const { aggiungiProdotto } = useStore();
+  const [p, setP] = useState<Omit<Prodotto, 'id'>>({
+    attivita, nome: '', tipo: attivita === 'VC' ? 'carnet' : 'pacchetto', sessioni: 10, prezzo: 0,
+    validitaGiorni: 30, preavvisoOre: attivita === 'VC' ? 0 : 24, scalaTardiva: attivita !== 'VC',
+  });
+  const set = <K extends keyof typeof p>(k: K, v: (typeof p)[K]) => setP((x) => ({ ...x, [k]: v }));
+  const conSessioni = !SENZA_SESSIONI.includes(p.tipo);
+  const valido = p.nome.trim() && p.prezzo >= 0 && p.validitaGiorni > 0 && (!conSessioni || (p.sessioni ?? 0) > 0);
+  const salva = () => {
+    aggiungiProdotto({ ...p, nome: p.nome.trim(), sessioni: conSessioni ? p.sessioni : undefined });
+    onClose();
+  };
+
+  return (
+    <Modal titolo="Nuovo prodotto" onClose={onClose} footer={<button className="btn primary" disabled={!valido} onClick={salva}>Aggiungi al catalogo</button>}>
+      <label className="lbl">Attività</label>
+      <div className="tabs">
+        {(Object.keys(ATTIVITA) as Attivita[]).map((a) => (
+          <button key={a} className={p.attivita === a ? 'on' : ''} onClick={() => set('attivita', a)}>{ATTIVITA[a].breve}</button>
+        ))}
+      </div>
+      <label className="lbl">Nome *</label>
+      <input className="field" autoFocus value={p.nome} onChange={(e) => set('nome', e.target.value)} placeholder="Es. PT Studio – 12 sessioni" />
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div>
+          <label className="lbl">Tipo</label>
+          <select className="field" value={p.tipo} onChange={(e) => set('tipo', e.target.value as TipoProdotto)}>
+            {(Object.keys(TIPI) as TipoProdotto[]).map((t) => (
+              <option key={t} value={t}>{TIPI[t]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="lbl">Sessioni</label>
+          <input className="field" type="number" min={1} disabled={!conSessioni} value={conSessioni ? p.sessioni ?? '' : ''}
+            placeholder={conSessioni ? '' : 'non previste'} onChange={(e) => set('sessioni', Number(e.target.value) || undefined)} />
+        </div>
+        <div>
+          <label className="lbl">Prezzo (€)</label>
+          <input className="field" type="number" min={0} step={5} value={p.prezzo} onChange={(e) => set('prezzo', Number(e.target.value))} />
+        </div>
+        <div>
+          <label className="lbl">Validità (giorni)</label>
+          <input className="field" type="number" min={1} value={p.validitaGiorni} onChange={(e) => set('validitaGiorni', Number(e.target.value))} />
+        </div>
+        <div>
+          <label className="lbl">Preavviso disdetta (ore)</label>
+          <input className="field" type="number" min={0} value={p.preavvisoOre} onChange={(e) => set('preavvisoOre', Number(e.target.value))} />
+        </div>
+        <div>
+          <label className="lbl">Disdetta tardiva</label>
+          <select className="field" value={p.scalaTardiva ? 'si' : 'no'} onChange={(e) => set('scalaTardiva', e.target.value === 'si')}>
+            <option value="si">Scalata dal pacchetto</option>
+            <option value="no">Non scalata</option>
+          </select>
+        </div>
+      </div>
+      {conSessioni && p.sessioni && p.prezzo > 0 && (
+        <p className="small muted">Prezzo per sessione: {fmtEuro(p.prezzo / p.sessioni)}</p>
+      )}
+      <p className="small muted">Dopo l’aggiunta si vende dalla scheda del cliente con “Pacchetto”.</p>
+    </Modal>
+  );
+}
 
 const TIPI: Record<TipoProdotto, string> = {
   pacchetto: 'Pacchetto sessioni', carnet: 'Carnet community', abbonamento: 'Abbonamento', percorso: 'Percorso',
@@ -21,6 +92,7 @@ export function Pacchetti() {
   const [tab, setTab] = useState<'clienti' | 'catalogo'>('clienti');
   const [att, setAtt] = useState<Attivita | 'tutte'>('tutte');
   const [proroga, setProroga] = useState<PacchettoCliente | null>(null);
+  const [nuovoProdotto, setNuovoProdotto] = useState(false);
 
   const righe = db.pacchetti
     .map((k) => ({ k, s: statoPacchetto(db, k), seguito: titolariDi(k).some((id) => daSeguire(db.clienti.find((x) => x.id === id), statoPacchetto(db, k).prodotto.attivita)) }))
@@ -115,9 +187,9 @@ export function Pacchetti() {
                     {s.giorni < 0 ? (
                       <span className="badge neutral">scaduto</span>
                     ) : s.giorni <= db.soglie.giorniScadenza ? (
-                      <span className="badge warn">tra {s.giorni} g</span>
+                      <span className="badge warn">scade tra {s.giorni} g</span>
                     ) : (
-                      <span className="small muted">tra {s.giorni} g</span>
+                      <span className="small muted">scade tra {s.giorni} g</span>
                     )}
                   </td>
                   <td className="right">
@@ -145,7 +217,7 @@ export function Pacchetti() {
                   <div className="small muted" style={{ margin: '6px 0' }}>Non più in vendita: si mantengono residui e condizioni già concordate.</div>
                 ) : (
                   <>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800, margin: '6px 0' }}>{fmtEuro(p.prezzo)}</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, margin: '6px 0' }}>{fmtEuro(p.prezzo)}</div>
                     <div className="small muted">
                       {p.sessioni ? `${p.sessioni} sessioni` : 'Senza sessioni da scalare'} · validità {p.validitaGiorni} giorni
                       {p.tipo === 'carnet' ? ' (modificabile fino a 90, con proroga manuale)' : ''}
@@ -161,10 +233,11 @@ export function Pacchetti() {
                 )}
               </div>
             ))}
-          <div className="card empty" style={{ margin: 0, borderStyle: 'dashed' }}>
-            + Nuovo prodotto
-            <div className="small">(gestione catalogo nella versione reale)</div>
-          </div>
+          <button className="card empty nuovo-prodotto" style={{ margin: 0, borderStyle: 'dashed' }} onClick={() => setNuovoProdotto(true)}>
+            <Plus size={20} />
+            <div style={{ fontWeight: 600, marginTop: 4 }}>Nuovo prodotto</div>
+            <div className="small">pacchetto, carnet, abbonamento, percorso…</div>
+          </button>
         </div>
       )}
       <p className="small muted" style={{ marginTop: 12 }}>
@@ -172,6 +245,7 @@ export function Pacchetti() {
         Prezzi dei carnet community reali; gli altri prezzi sono indicativi.
       </p>
       {proroga && <ProrogaModal k={proroga} onClose={() => setProroga(null)} />}
+      {nuovoProdotto && <NuovoProdotto attivita={att === 'tutte' ? 'LT' : att} onClose={() => setNuovoProdotto(false)} />}
     </>
   );
 }

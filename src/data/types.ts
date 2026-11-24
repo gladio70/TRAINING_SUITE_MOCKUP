@@ -166,6 +166,7 @@ export interface Todo {
   fatto: boolean;
   attivita?: Attivita;
   categoria?: 'amministrazione';
+  clienteId?: string; // cosa da fare che riguarda un cliente: dagli avvisi si apre la sua scheda
 }
 
 export interface Soglie {

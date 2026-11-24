@@ -1,12 +1,12 @@
 // DASH-01..05: vista "Oggi" con widget cliccabili, avvisi per priorità, cose da fare, messaggi da inviare
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, CalendarClock, ClipboardCheck, Package, PhoneCall, Plus, Send, TrendingUp, Wallet } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, CalendarClock, ClipboardCheck, Package, PhoneCall, Plus, Send, Settings, TrendingUp, Wallet } from 'lucide-react';
 import { useStore } from '../data/store';
-import { attivitaDi, calcolaAvvisi, economiaMese, daSeguire, messaggiSuggeriti, nomeCliente, oreAppuntamenti, statoPagamento, statoPacchetto, titolariDi } from '../data/logic';
+import { attivitaDi, calcolaAvvisi, daRichiamare, economiaMese, daSeguire, messaggiSuggeriti, nomeCliente, oreAppuntamenti, statoPagamento, statoPacchetto, titolariDi } from '../data/logic';
 import type { Attivita } from '../data/types';
 import { aggiungiGiorni, fmtDataLunga, fmtEuro, inizioGiorno, inizioSettimana, stessoGiorno, toIsoLocale } from '../lib/format';
-import { FiltroAttivita } from '../components/ui';
+import { FiltroAttivita, MostraAltri, VOCI_VISIBILI } from '../components/ui';
 import { NuovoAppuntamento, RigaAppuntamento } from '../components/Appuntamenti';
 import { InvioMessaggio } from '../components/InvioMessaggio';
 import type { MessaggioSuggerito } from '../data/logic';
@@ -15,6 +15,26 @@ const PRIO = ['Scaduto / urgente', 'Oggi', 'Questa settimana'];
 
 export function Dashboard() {
   const { db, toggleTodo, aggiungiTodo } = useStore();
+  // dagli avvisi: "?vai=cose-da-fare" porta al riquadro Cose da fare e lo evidenzia un momento
+  const [sp, setSp] = useSearchParams();
+  const coseDaFare = useRef<HTMLDivElement>(null);
+  const [evidenzia, setEvidenzia] = useState(false);
+  // liste accorciate a 5 voci: quali sono aperte per intero ("Mostra altri")
+  const [aperti, setAperti] = useState<string[]>([]);
+  const apri = (k: string) => setAperti((x) => (x.includes(k) ? x.filter((y) => y !== k) : [...x, k]));
+  const visibili = <T,>(lista: T[], k: string) => (aperti.includes(k) ? lista : lista.slice(0, VOCI_VISIBILI));
+  useEffect(() => {
+    if (sp.get('vai') !== 'cose-da-fare') return;
+    coseDaFare.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setEvidenzia(true);
+    setAperti((x) => (x.includes('todo') ? x : [...x, 'todo'])); // la cosa da fare cercata potrebbe essere oltre le prime 5
+    setSp({}, { replace: true });
+  }, [sp, setSp]);
+  useEffect(() => {
+    if (!evidenzia) return;
+    const t = setTimeout(() => setEvidenzia(false), 1600);
+    return () => clearTimeout(t);
+  }, [evidenzia]);
   const [filtro, setFiltro] = useState<Attivita | 'tutte'>('tutte');
   const [nuovo, setNuovo] = useState(false);
   const [msg, setMsg] = useState<MessaggioSuggerito | null>(null);
@@ -38,7 +58,8 @@ export function Dashboard() {
   }).length;
   const pagScaduti = db.pagamenti.filter((p) => statoPagamento(p) === 'scaduto' && ok(p.attivita));
   const daRegistrare = avvisi.filter((a) => a.tipo === 'esito').length;
-  const richiami = avvisi.filter((a) => a.tipo === 'richiamo').length;
+  // persone (non servizi) da richiamare o verificare, con la stessa regola del filtro della pagina Clienti
+  const richiami = new Set(daRichiamare(db).filter((r) => ok(r.servizio.attivita)).map((r) => r.cliente.id)).size;
   const eco = economiaMese(db);
 
   // cose di oggi, in ritardo e scadenze amministrative della settimana
@@ -51,9 +72,14 @@ export function Dashboard() {
   return (
     <>
       <div className="page-head">
-        <div>
-          <h1>Ciao Mattia</h1>
-          <div className="sub" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
+        <div className="titolo-con-azione">
+          <div>
+            <h1>Ciao Mattia</h1>
+            <div className="sub" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
+          </div>
+          <Link to="/impostazioni" className="btn ghost icona" aria-label="Impostazioni" title="Impostazioni">
+            <Settings size={20} />
+          </Link>
         </div>
         <div className="row">
           <FiltroAttivita valore={filtro} onChange={setFiltro} />
@@ -63,7 +89,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="banner">Mockup con dati dimostrativi: le modifiche restano solo in questo browser (Impostazioni → ripristina).</div>
+      <div className="banner">Mockup con dati dimostrativi: le modifiche restano solo in questo browser (rotella ⚙ in alto → ripristina).</div>
 
       <div className="widgets">
         <Link to="/agenda" className="widget">
@@ -74,7 +100,7 @@ export function Dashboard() {
         <Link to="/agenda?filtro=esiti" className={`widget ${daRegistrare ? 'warn' : ''}`}>
           <div className="w-ico"><ClipboardCheck size={18} /></div>
           <div className="w-num">{daRegistrare}</div>
-          <div className="w-lbl">esiti da registrare</div>
+          <div className="w-lbl">eventi da registrare</div>
         </Link>
         <Link to="/pacchetti?filtro=attenzione" className={`widget ${pacchettiAttenzione ? 'warn' : ''}`}>
           <div className="w-ico"><Package size={18} /></div>
@@ -96,7 +122,7 @@ export function Dashboard() {
           <div className="w-num">{oreAppuntamenti(appSett).toFixed(0)} h</div>
           <div className="w-lbl">carico della settimana · {appSett.length} impegni</div>
         </Link>
-        <Link to="/clienti?stato=pausa" className={`widget ${richiami ? 'warn' : ''}`}>
+        <Link to={`/clienti?stato=da richiamare${filtro !== 'tutte' ? `&att=${filtro}` : ''}`} className={`widget ${richiami ? 'warn' : ''}`}>
           <div className="w-ico"><PhoneCall size={18} /></div>
           <div className="w-num">{richiami}</div>
           <div className="w-lbl">persone da richiamare o verificare</div>
@@ -116,16 +142,17 @@ export function Dashboard() {
               <Link to="/agenda" className="btn sm">Apri agenda</Link>
             </div>
             {appOggi.length === 0 && <div className="empty">Nessun appuntamento oggi.</div>}
-            {appOggi.map((a) => (
+            {visibili(appOggi, 'agenda').map((a) => (
               <RigaAppuntamento key={a.id} a={a} compatta />
             ))}
+            <MostraAltri totale={appOggi.length} aperto={aperti.includes('agenda')} onToggle={() => apri('agenda')} />
           </div>
 
-          <div className="card">
+          <div className={`card ${evidenzia ? 'evidenziata' : ''}`} ref={coseDaFare}>
             <div className="card-head">
               <h2>Cose da fare</h2>
             </div>
-            {todoOggi.map((t) => (
+            {visibili(todoOggi, 'todo').map((t) => (
               <label key={t.id} className={`todo ${t.fatto ? 'fatto' : ''}`}>
                 <input type="checkbox" checked={t.fatto} onChange={() => toggleTodo(t.id)} />
                 {t.attivita && <span className={`dot ${t.attivita}`} />}
@@ -134,6 +161,7 @@ export function Dashboard() {
                 {new Date(t.data) < oggi && !t.fatto && <span className="badge danger">in ritardo</span>}
               </label>
             ))}
+            <MostraAltri totale={todoOggi.length} aperto={aperti.includes('todo')} onToggle={() => apri('todo')} />
             <form
               className="row"
               style={{ marginTop: 8 }}
@@ -166,7 +194,7 @@ export function Dashboard() {
                 return (
                   <div key={p}>
                     <div className="group-lbl">{PRIO[p]}</div>
-                    {gruppo.slice(0, 8).map((a) => (
+                    {visibili(gruppo, `p${p}`).map((a) => (
                       <Link key={a.id} to={a.link} className="item">
                         <span className={`prio p${a.priorita}`} />
                         {a.attivita && <span className={`dot ${a.attivita}`} />}
@@ -176,7 +204,7 @@ export function Dashboard() {
                         </div>
                       </Link>
                     ))}
-                    {gruppo.length > 8 && <div className="small muted">…e altri {gruppo.length - 8}</div>}
+                    <MostraAltri totale={gruppo.length} aperto={aperti.includes(`p${p}`)} onToggle={() => apri(`p${p}`)} />
                   </div>
                 );
               })}
@@ -190,7 +218,7 @@ export function Dashboard() {
             </div>
             {suggeriti.length === 0 && <div className="empty">Nessun messaggio in sospeso.</div>}
             <div className="list">
-              {suggeriti.slice(0, 6).map((m) => (
+              {visibili(suggeriti, 'msg').map((m) => (
                 <div key={m.chiave} className="item">
                   <div className="grow">
                     <div className="t">{nomeCliente(db.clienti.find((c) => c.id === m.clienteId))}</div>
@@ -202,6 +230,7 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
+            <MostraAltri totale={suggeriti.length} aperto={aperti.includes('msg')} onToggle={() => apri('msg')} />
           </div>
         </div>
       </div>
