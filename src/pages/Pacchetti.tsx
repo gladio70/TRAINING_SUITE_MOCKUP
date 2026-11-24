@@ -41,7 +41,7 @@ export function Pacchetti() {
           <h1>Pacchetti</h1>
           <div className="sub">Sessioni residue scalate automaticamente dagli esiti delle sessioni</div>
         </div>
-        <div className="tabs evidenza">
+        <div className="tabs">
           <button className={tab === 'clienti' ? 'on' : ''} onClick={() => setTab('clienti')}>Dei clienti</button>
           <button className={tab === 'catalogo' ? 'on' : ''} onClick={() => setTab('catalogo')}>Catalogo</button>
         </div>
