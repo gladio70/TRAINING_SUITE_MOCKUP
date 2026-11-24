@@ -45,12 +45,12 @@ export function Clienti() {
             {uniche} persone in carico · {conteggi.map((x) => `${ATTIVITA[x.a].breve} ${x.n}`).join(' · ')} (chi segue più servizi è contato una volta)
           </div>
         </div>
-        <div className="row">
-          <button className="btn" onClick={() => setImporta(true)}>
-            <Upload size={16} /> Importa da Google Sheets
-          </button>
-          <button className="btn primary" onClick={() => setNuovo(true)}>
+        <div className="azioni-pari">
+          <button className="btn" onClick={() => setNuovo(true)}>
             <Plus size={16} /> Nuovo cliente
+          </button>
+          <button className="btn" onClick={() => setImporta(true)} title="Importa da Google Sheets">
+            <Upload size={16} /> Importa Sheets
           </button>
         </div>
       </div>

@@ -348,3 +348,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 @media (max-width: 860px) {
   .tbl.stack td.cella { flex: 1 1 45%; text-align: left; }
 }
+
+/* pulsanti affiancati della stessa larghezza e grafica (es. Clienti: Nuovo cliente / Importa) */
+.azioni-pari { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.azioni-pari .btn { justify-content: center; white-space: nowrap; }
+@media (max-width: 860px) {
+  .azioni-pari { width: 100%; }
+}
