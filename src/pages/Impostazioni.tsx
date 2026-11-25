@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
 import { apertaComeApp, appenaInstallata, installa, installabile, seguiInstallazione, suIPhone } from '../lib/installazione';
 import { useStore } from '../data/store';
+import { CampoNumero } from '../components/ui';
 import { VERSIONE, etichettaVersione } from '../lib/versione';
 import { impostaTema, temaAttuale, type Tema } from '../lib/tema';
 
@@ -83,11 +84,10 @@ export function Impostazioni() {
           <div className="card">
             <h2>Soglie degli avvisi</h2>
             <label className="lbl">Avvisa quando le sessioni residue sono al massimo</label>
-            <input className="field" type="number" min={0} max={10} value={db.soglie.residueMin}
-              onChange={(e) => setSoglie({ ...db.soglie, residueMin: Number(e.target.value) })} />
+            <CampoNumero min={0} max={10} valore={db.soglie.residueMin} onChange={(n) => setSoglie({ ...db.soglie, residueMin: n })} />
             <label className="lbl">Avvisa quando pacchetti e abbonamenti scadono entro (giorni)</label>
-            <input className="field" type="number" min={1} max={60} value={db.soglie.giorniScadenza}
-              onChange={(e) => setSoglie({ ...db.soglie, giorniScadenza: Number(e.target.value) })} />
+            <CampoNumero min={1} max={60} valore={db.soglie.giorniScadenza} onChange={(n) => setSoglie({ ...db.soglie, giorniScadenza: n })} />
+            <p className="small muted">Valori ammessi: residue da 0 a 10, giorni da 1 a 60.</p>
           </div>
         </div>
         <div className="card" style={{ margin: 0 }}>

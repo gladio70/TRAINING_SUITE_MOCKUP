@@ -1,5 +1,53 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
+
+/**
+ * Campo numerico che si può svuotare e riscrivere: mentre si scrive accetta anche il campo vuoto
+ * e salva solo numeri validi; uscendo dal campo vuoto o fuori limite torna a un valore valido (min/max).
+ */
+export function CampoNumero({ valore, onChange, min, max, step, disabled, placeholder }: {
+  valore: number | undefined;
+  onChange: (n: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const [testo, setTesto] = useState(valore == null ? '' : String(valore));
+  const [inModifica, setInModifica] = useState(false);
+  // se il valore cambia da fuori (es. ripristino), il campo si allinea quando non si sta scrivendo
+  useEffect(() => {
+    if (!inModifica) setTesto(valore == null ? '' : String(valore));
+  }, [valore, inModifica]);
+  const limita = (n: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, n));
+  return (
+    <input
+      className="field"
+      type="number"
+      inputMode="decimal"
+      min={min}
+      max={max}
+      step={step}
+      disabled={disabled}
+      placeholder={placeholder}
+      value={testo}
+      onFocus={() => setInModifica(true)}
+      onChange={(e) => {
+        setTesto(e.target.value);
+        const n = Number(e.target.value.replace(',', '.'));
+        if (e.target.value.trim() !== '' && Number.isFinite(n) && n === limita(n)) onChange(n);
+      }}
+      onBlur={() => {
+        setInModifica(false);
+        const n = Number(testo.replace(',', '.'));
+        const valido = testo.trim() !== '' && Number.isFinite(n) ? limita(n) : valore ?? min ?? 0;
+        if (valido !== valore) onChange(valido);
+        setTesto(String(valido));
+      }}
+    />
+  );
+}
 
 /** Voci visibili nelle liste della pagina Oggi prima di "Mostra altri" */
 export const VOCI_VISIBILI = 5;

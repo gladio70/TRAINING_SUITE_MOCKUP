@@ -6,7 +6,7 @@ import { useStore } from '../data/store';
 import { daSeguire, FORMULE, nomeCliente, statoPacchetto, titolariDi } from '../data/logic';
 import { ATTIVITA, type Attivita, type PacchettoCliente, type Prodotto, type TipoProdotto } from '../data/types';
 import { fmtDataBreve, fmtEuro } from '../lib/format';
-import { BadgeAttivita, FiltroAttivita, Modal } from '../components/ui';
+import { BadgeAttivita, CampoNumero, FiltroAttivita, Modal } from '../components/ui';
 import { ProrogaModal } from './ClienteDettaglio';
 
 // tipi senza sessioni da scalare: si usano a tempo (validità), non a sessioni
@@ -48,20 +48,20 @@ function NuovoProdotto({ attivita, onClose }: { attivita: Attivita; onClose: () 
         </div>
         <div>
           <label className="lbl">Sessioni</label>
-          <input className="field" type="number" min={1} disabled={!conSessioni} value={conSessioni ? p.sessioni ?? '' : ''}
-            placeholder={conSessioni ? '' : 'non previste'} onChange={(e) => set('sessioni', Number(e.target.value) || undefined)} />
+          <CampoNumero min={1} max={200} disabled={!conSessioni} valore={conSessioni ? p.sessioni : undefined}
+            placeholder={conSessioni ? '' : 'non previste'} onChange={(n) => set('sessioni', n)} />
         </div>
         <div>
           <label className="lbl">Prezzo (€)</label>
-          <input className="field" type="number" min={0} step={5} value={p.prezzo} onChange={(e) => set('prezzo', Number(e.target.value))} />
+          <CampoNumero min={0} max={10000} step={5} valore={p.prezzo} onChange={(n) => set('prezzo', n)} />
         </div>
         <div>
           <label className="lbl">Validità (giorni)</label>
-          <input className="field" type="number" min={1} value={p.validitaGiorni} onChange={(e) => set('validitaGiorni', Number(e.target.value))} />
+          <CampoNumero min={1} max={730} valore={p.validitaGiorni} onChange={(n) => set('validitaGiorni', n)} />
         </div>
         <div>
           <label className="lbl">Preavviso disdetta (ore)</label>
-          <input className="field" type="number" min={0} value={p.preavvisoOre} onChange={(e) => set('preavvisoOre', Number(e.target.value))} />
+          <CampoNumero min={0} max={168} valore={p.preavvisoOre} onChange={(n) => set('preavvisoOre', n)} />
         </div>
         <div>
           <label className="lbl">Disdetta tardiva</label>
