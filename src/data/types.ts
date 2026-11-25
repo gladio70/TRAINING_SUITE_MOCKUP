@@ -7,7 +7,7 @@ export type Attivita = 'VA' | 'LT' | 'VC';
 export const ATTIVITA: Record<Attivita, { nome: string; breve: string }> = {
   VA: { nome: 'Virgin Active', breve: 'Virgin' },
   LT: { nome: 'Life Training', breve: 'Life' },
-  VC: { nome: 'Verticalisthenics Community', breve: 'Community' },
+  VC: { nome: 'Community', breve: 'Community' },
 };
 
 /** Stato di una persona in un singolo servizio: la stessa persona può avere stati diversi per attività */

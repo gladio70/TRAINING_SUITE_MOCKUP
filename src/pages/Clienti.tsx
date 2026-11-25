@@ -2,9 +2,9 @@
 // Una persona può seguire più servizi, ognuno con il suo stato (risposte di Mattia, D-02).
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Upload } from 'lucide-react';
+import { Plus, Search, Trash2, Upload } from 'lucide-react';
 import { useStore } from '../data/store';
-import { daRichiamare, pacchettiDi, statoPacchetto } from '../data/logic';
+import { daRichiamare, effettiEliminazione, pacchettiDi, statoPacchetto } from '../data/logic';
 import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente, type StatoServizio } from '../data/types';
 import { fmtDataBreve, toIsoLocale } from '../lib/format';
 import { Avatar, BadgeServizio, FiltroAttivita, Modal } from '../components/ui';
@@ -126,9 +126,56 @@ export function Clienti() {
   );
 }
 
+/** Conferma dell'eliminazione: elenca cosa verrà cancellato e propone l'alternativa "Terminato" */
+function ConfermaElimina({ cliente, onAnnulla, onElimina }: { cliente: Cliente; onAnnulla: () => void; onElimina: () => void }) {
+  const { db } = useStore();
+  const e = effettiEliminazione(db, cliente.id);
+  const voci = (
+    [
+      [e.pacchetti, 'pacchetto, carnet o percorso', 'pacchetti, carnet o percorsi'],
+      [e.sessioni, 'sessione in agenda', 'sessioni in agenda'],
+      [e.presenze, 'presenza alle classi', 'presenze alle classi'],
+      [e.pagamenti, 'pagamento', 'pagamenti (anche quelli già incassati)'],
+      [e.messaggi, 'messaggio nel registro', 'messaggi nel registro'],
+      [e.cose, 'cosa da fare', 'cose da fare'],
+    ] as [number, string, string][]
+  )
+    .filter(([n]) => n > 0)
+    .map(([n, uno, tanti]) => [n, n === 1 ? uno : tanti] as [number, string]);
+  return (
+    <Modal
+      titolo="Eliminare il cliente?"
+      onClose={onAnnulla}
+      footer={
+        <>
+          <button className="btn" onClick={onAnnulla}>Annulla</button>
+          <button className="btn danger" onClick={onElimina}><Trash2 size={16} /> Elimina definitivamente</button>
+        </>
+      }
+    >
+      <p style={{ marginTop: 0 }}>
+        Verranno cancellati <b>{cliente.nome} {cliente.cognome}</b> e tutti i suoi dati{voci.length ? ':' : '.'}
+      </p>
+      {voci.length > 0 && (
+        <ul className="small" style={{ paddingLeft: 18, margin: '0 0 8px' }}>
+          {voci.map(([n, t]) => <li key={t}>{n} {t}</li>)}
+        </ul>
+      )}
+      {e.pacchettiCeduti > 0 && (
+        <p className="small">I pacchetti condivisi ({e.pacchettiCeduti}) restano all’altra persona, che ne diventa titolare.</p>
+      )}
+      <p className="small" style={{ color: 'var(--danger)', fontWeight: 600 }}>L’operazione non si può annullare e cambia anche i report dei mesi passati.</p>
+      <p className="small muted">
+        Se vuoi solo toglierlo dagli elenchi e dagli avvisi conservando lo storico, annulla e imposta lo stato del servizio su “Terminato”.
+      </p>
+    </Modal>
+  );
+}
+
 export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: () => void }) {
-  const { nuovoCliente, salvaCliente } = useStore();
+  const { nuovoCliente, salvaCliente, eliminaCliente } = useStore();
   const nav = useNavigate();
+  const [elimina, setElimina] = useState(false);
   const [c, setC] = useState<Omit<Cliente, 'id' | 'creatoIl'>>(
     cliente ?? { nome: '', cognome: '', telefono: '', email: '', telegram: '', servizi: [{ attivita: 'LT', stato: 'attivo' }], obiettivi: '', note: '', privacyData: undefined },
   );
@@ -147,7 +194,31 @@ export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: 
   };
 
   return (
-    <Modal titolo={cliente ? 'Modifica cliente' : 'Nuovo cliente'} onClose={onClose} footer={<button className="btn primary" disabled={!valido} onClick={salva}>Salva</button>}>
+    <Modal
+      titolo={cliente ? 'Modifica cliente' : 'Nuovo cliente'}
+      onClose={onClose}
+      footer={
+        <>
+          {cliente && (
+            <button className="btn danger" style={{ marginRight: 'auto' }} onClick={() => setElimina(true)}>
+              <Trash2 size={16} /> Elimina cliente
+            </button>
+          )}
+          <button className="btn primary" disabled={!valido} onClick={salva}>Salva</button>
+        </>
+      }
+    >
+      {elimina && cliente && (
+        <ConfermaElimina
+          cliente={cliente}
+          onAnnulla={() => setElimina(false)}
+          onElimina={() => {
+            eliminaCliente(cliente.id);
+            onClose();
+            nav('/clienti');
+          }}
+        />
+      )}
       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div>
           <label className="lbl">Nome *</label>

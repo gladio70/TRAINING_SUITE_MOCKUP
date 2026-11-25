@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, Todo } from './types';
 import { creaDbDemo } from './mock';
-import { carnetAttivo } from './logic';
+import { carnetAttivo, eliminaClienteDa } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
 
 // v0.3 ha cambiato il modello dei dati: i dati salvati con le versioni precedenti non sono compatibili
@@ -41,6 +41,7 @@ interface Azioni {
   aggiungiAppuntamenti: (a: Omit<Appuntamento, 'id'>[]) => void;
   togglePresenza: (appuntamentoId: string, clienteId: string) => void;
   salvaCliente: (c: Cliente) => void;
+  eliminaCliente: (id: string) => void;
   nuovoCliente: (c: Omit<Cliente, 'id' | 'creatoIl'>) => string;
   registraPagamento: (id: string, metodo: Pagamento['metodo']) => void;
   aggiungiPagamento: (p: Omit<Pagamento, 'id'>) => void;
@@ -90,6 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }),
       })),
     salvaCliente: (c) => setDb((d) => ({ ...d, clienti: d.clienti.map((x) => (x.id === c.id ? c : x)) })),
+    eliminaCliente: (id) => setDb((d) => eliminaClienteDa(d, id)),
     nuovoCliente: (c) => {
       const id = uid();
       setDb((d) => ({ ...d, clienti: [...d.clienti, { ...c, id, creatoIl: oggiIso() }] }));

@@ -386,3 +386,64 @@ export function dettaglioMese(db: Db, rif = new Date()) {
   const costi = db.costi.filter((c) => nel(c.data)).sort(perData((c) => c.data));
   return { venduti, incassati, daIncassare, erogate, costi };
 }
+
+// ---------- eliminazione di un cliente (GDPR, NFR-04: diritto alla cancellazione) ----------
+
+/**
+ * Elimina il cliente e tutto ciò che lo riguarda. I pacchetti condivisi passano all'altra persona
+ * (con i loro pagamenti e sessioni), così i dati di chi resta non vengono toccati.
+ */
+export function eliminaClienteDa(db: Db, id: string): Db {
+  const pacchettiEliminati = new Set<string>();
+  const pacchetti: PacchettoCliente[] = [];
+  const nuovoTitolare = new Map<string, string>(); // pacchetto condiviso → nuovo titolare
+  for (const k of db.pacchetti) {
+    const altri = (k.condivisoCon ?? []).filter((x) => x !== id);
+    if (k.clienteId === id) {
+      if (altri.length) {
+        nuovoTitolare.set(k.id, altri[0]);
+        pacchetti.push({ ...k, clienteId: altri[0], condivisoCon: altri.length > 1 ? altri.slice(1) : undefined });
+      } else pacchettiEliminati.add(k.id);
+    } else pacchetti.push(k.condivisoCon ? { ...k, condivisoCon: altri.length ? altri : undefined } : k);
+  }
+  const appuntamenti: Appuntamento[] = [];
+  for (const a of db.appuntamenti) {
+    if (a.pacchettoId && pacchettiEliminati.has(a.pacchettoId)) continue;
+    let x = a;
+    const con = (a.con ?? []).filter((c) => c !== id);
+    if (a.clienteId === id) {
+      if (!con.length) continue; // sessione solo sua
+      x = { ...x, clienteId: con[0], con: con.length > 1 ? con.slice(1) : undefined };
+    } else if (a.con?.includes(id)) x = { ...x, con: con.length ? con : undefined };
+    if (a.presenze?.some((p) => p.clienteId === id)) x = { ...x, presenze: a.presenze.filter((p) => p.clienteId !== id) };
+    appuntamenti.push(x);
+  }
+  const pagamenti = db.pagamenti
+    .filter((p) => !(p.pacchettoId && pacchettiEliminati.has(p.pacchettoId)))
+    .map((p) => (p.clienteId === id && p.pacchettoId && nuovoTitolare.has(p.pacchettoId) ? { ...p, clienteId: nuovoTitolare.get(p.pacchettoId)! } : p))
+    .filter((p) => p.clienteId !== id);
+  return {
+    ...db,
+    clienti: db.clienti.filter((c) => c.id !== id),
+    pacchetti,
+    appuntamenti,
+    pagamenti,
+    messaggi: db.messaggi.filter((m) => m.clienteId !== id),
+    todo: db.todo.filter((t) => t.clienteId !== id),
+  };
+}
+
+/** Cosa sparirebbe eliminando il cliente: per la finestra di conferma */
+export function effettiEliminazione(db: Db, id: string) {
+  const dopo = eliminaClienteDa(db, id);
+  const presenzePrima = db.appuntamenti.reduce((n, a) => n + (a.presenze?.filter((p) => p.clienteId === id).length ?? 0), 0);
+  return {
+    pacchetti: db.pacchetti.length - dopo.pacchetti.length,
+    pacchettiCeduti: db.pacchetti.filter((k) => k.clienteId === id && (k.condivisoCon ?? []).length > 0).length,
+    sessioni: db.appuntamenti.length - dopo.appuntamenti.length,
+    presenze: presenzePrima,
+    pagamenti: db.pagamenti.length - dopo.pagamenti.length,
+    messaggi: db.messaggi.length - dopo.messaggi.length,
+    cose: db.todo.length - dopo.todo.length,
+  };
+}

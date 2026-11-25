@@ -188,7 +188,7 @@ function Settimana({ lun, lista, onApri }: { lun: Date; lista: Appuntamento[]; o
                   title={`${nomeAppuntamento(db, x)} · ${x.servizio} · ${x.luogo}`}
                 >
                   <b>{c ? `${c.nome} ${c.cognome[0]}.${x.con?.length ? ' +' + x.con.length : ''}` : x.contatto ?? x.gruppo}</b>
-                  {x.servizio}
+                  <span className="ev-servizio">{x.servizio}</span>
                 </div>
               );
             })}
@@ -217,8 +217,9 @@ function Mese({ mese, lista, onGiorno }: { mese: Date; lista: Appuntamento[]; on
                 {(Object.keys(ATTIVITA) as Attivita[]).map((att) => {
                   const ore = oreAppuntamenti(delGiorno.filter((x) => x.attivita === att));
                   return ore > 0 ? (
-                    <span key={att} className={`mb ${att}`}>
-                      {ATTIVITA[att].breve} {ore.toFixed(1).replace('.', ',')}h
+                    <span key={att} className={`mb ${att}`} title={`${ATTIVITA[att].nome}: ${ore.toFixed(1).replace('.', ',')} ore`}>
+                      <span className="mb-nome">{ATTIVITA[att].breve} </span>
+                      {ore.toFixed(1).replace('.', ',')}h
                     </span>
                   ) : null;
                 })}
