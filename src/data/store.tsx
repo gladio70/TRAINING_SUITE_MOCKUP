@@ -20,6 +20,19 @@ function carica(): Db {
       db.todo = db.todo.map((t) => (t.id === 't1' && !t.clienteId && t.testo.includes('Sara Conti') ? { ...t, clienteId: 'lt1' } : t));
       // v0.4: modello del messaggio con il link di pagamento
       if (!db.modelli.some((m) => m.id === 'm-link')) db.modelli = [...db.modelli, { id: 'm-link', titolo: 'Link di pagamento', testo: MODELLO_LINK }];
+      // v0.3.11: cliente di prova Claudio Nanni (con pacchetto, pagamento e appuntamento) anche nei dati già salvati.
+      // Applicata una sola volta: se poi lo si elimina, non ricompare.
+      if (!db.migrazioni?.includes('cliente-cn1')) {
+        db.migrazioni = [...(db.migrazioni ?? []), 'cliente-cn1'];
+        if (!db.clienti.some((c) => c.id === 'cn1')) {
+          const demo = creaDbDemo();
+          const aggiungi = <T extends { id: string }>(lista: T[], nuovi: T[]) => [...nuovi.filter((n) => !lista.some((x) => x.id === n.id)), ...lista];
+          db.clienti = aggiungi(db.clienti, demo.clienti.filter((c) => c.id === 'cn1'));
+          db.pacchetti = aggiungi(db.pacchetti, demo.pacchetti.filter((k) => k.id === 'k-cn1'));
+          db.pagamenti = aggiungi(db.pagamenti, demo.pagamenti.filter((p) => p.id === 'pg-cn1'));
+          db.appuntamenti = aggiungi(db.appuntamenti, demo.appuntamenti.filter((a) => a.id === 'a-cn1'));
+        }
+      }
       return db;
     }
   } catch {

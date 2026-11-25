@@ -188,4 +188,6 @@ export interface Db {
   messaggi: MessaggioInviato[];
   todo: Todo[];
   soglie: Soglie;
+  /** Migrazioni dei dati salvati già applicate (per non ripeterle) */
+  migrazioni?: string[];
 }

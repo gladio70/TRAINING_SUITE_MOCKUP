@@ -495,3 +495,7 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 
 /* Oggi: numero degli avvisi urgenti, come il badge sull'icona */
 .conta-urgenti { color: var(--danger); font-weight: 600; }
+
+/* Filtri su una sola riga (Pacchetti) */
+.chips.una-riga { flex-wrap: nowrap; width: 100%; }
+.chips.una-riga .chip { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 6px 8px; }

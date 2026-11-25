@@ -136,10 +136,11 @@ export function Pacchetti() {
       <div className="row" style={{ marginBottom: 14 }}>
         <FiltroAttivita valore={att} onChange={setAtt} />
         {tab === 'clienti' && (
-          <div className="chips">
+          <div className="chips una-riga">
             {(['attivi', 'attenzione', 'conclusi', 'tutti'] as Filtro[]).map((f) => (
-              <button key={f} className={`chip ${filtro === f ? 'on' : ''}`} onClick={() => setSp({ filtro: f })}>
-                {f === 'attenzione' ? 'In esaurimento / scadenza' : f[0].toUpperCase() + f.slice(1)}
+              <button key={f} className={`chip ${filtro === f ? 'on' : ''}`} onClick={() => setSp({ filtro: f })}
+                title={f === 'attenzione' ? 'In esaurimento o in scadenza' : undefined}>
+                {f === 'attenzione' ? 'In esaurimento' : f[0].toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
