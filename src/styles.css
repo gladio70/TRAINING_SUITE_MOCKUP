@@ -420,3 +420,78 @@ button.nuovo-prodotto:hover { color: var(--accent); filter: brightness(1.08); }
   .mday .mb { padding: 0 2px; font-size: 0.58rem; text-align: center; white-space: nowrap; overflow: hidden; }
   .mday .mb-nome { display: none; }
 }
+
+/* agenda: swipe tra settimane/mesi con breve animazione di scivolamento */
+.swipe { touch-action: pan-y; }
+.swipe.da-destra { animation: scivola-da-destra 0.22s ease-out; }
+.swipe.da-sinistra { animation: scivola-da-sinistra 0.22s ease-out; }
+@keyframes scivola-da-destra { from { transform: translateX(40px); opacity: 0.3; } to { transform: none; opacity: 1; } }
+@keyframes scivola-da-sinistra { from { transform: translateX(-40px); opacity: 0.3; } to { transform: none; opacity: 1; } }
+.swipe-suggerimento { display: none; text-align: center; margin-top: 6px; }
+@media (max-width: 860px) {
+  .swipe-suggerimento { display: block; }
+}
+
+/* agenda: "Nuovo appuntamento" come pulsante rotondo con icona, in alto a destra accanto al titolo */
+.btn.icona-nuovo { width: 42px; height: 42px; padding: 0; border-radius: 50%; justify-content: center; flex-shrink: 0; }
+
+
+/* agenda: navigatore del periodo sotto il filtro delle attività – frecce ai lati, "Oggi" piccolo al centro */
+.navigatore-periodo { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.navigatore-periodo .btn { min-width: 40px; justify-content: center; }.navigatore-periodo .btn:nth-child(2) { width: 152px; min-width: 152px; padding-left: 0; padding-right: 0; }
+
+/* effetto alla pressione su tutti i pulsanti: si capisce subito che il tocco è arrivato */
+.btn { transition: transform 0.08s ease, filter 0.08s ease, background-color 0.15s ease; }
+.btn:active:not(:disabled) { transform: scale(0.94); filter: brightness(1.25); }
+/* agenda: "Oggi" quando si è già su oggi – breve lampeggio del calendario */
+.swipe.lampo { animation: lampo-oggi 0.35s ease-out; }
+@keyframes lampo-oggi { 0% { opacity: 0.35; transform: scale(0.985); } 100% { opacity: 1; transform: none; } }
+
+/* clienti: "Importa da Google Sheets" sotto il titolo, a tutta larghezza su telefono */
+@media (max-width: 860px) {
+  .btn.importa-sheets { width: 100%; justify-content: center; }
+}
+
+/* pagamenti: navigatore del mese al centro – < Novembre 2026 > (il nome riporta al mese corrente) */
+.navigatore-mese { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+.navigatore-mese .btn { min-width: 40px; justify-content: center; }
+.navigatore-mese .btn.mese { min-width: 170px; text-transform: capitalize; font-weight: 700; }
+
+/* pagamenti: azioni sui pagamenti aperti, badge "automatico", riga appena pagata online */
+.azioni-pagamento { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.btn.simula { border-style: dashed; }
+.badge.auto { background: var(--ok-soft); color: var(--ok); margin-left: 4px; }
+.tbl tr.appena-pagato td { background: var(--ok-soft); transition: background 0.4s; }
+@media (max-width: 860px) {
+  .tbl.stack td.pieno-mobile { flex-basis: 100%; margin-left: 0; }
+  .azioni-pagamento { justify-content: flex-start; }
+  .tbl.stack tr.appena-pagato { background: var(--ok-soft); }
+}
+
+/* icona con il "+" sovrapposto in basso a destra (es. Nuovo pagamento) */
+.icona-piu { position: relative; display: inline-flex; }
+.icona-piu .piu { position: absolute; right: -5px; bottom: -4px; display: inline-flex; border-radius: 50%; background: var(--primary); padding: 1px; }
+
+/* messaggi: elenco dei destinatari per un nuovo messaggio */
+.scegli-destinatario { max-height: 55vh; overflow: auto; }
+.scegli-destinatario button.item { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--border); text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.scegli-destinatario button.item:hover { background: var(--surface-2); }
+
+/* messaggi da inviare: schema unico – nome, motivo, poi tipo a sinistra e "Prepara" a destra */
+.msg-da-inviare { padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.msg-da-inviare:last-child { border-bottom: 0; }
+.msg-da-inviare .t { font-weight: 600; }
+.msg-da-inviare .d { color: var(--muted); font-size: 0.82rem; }
+.msg-piede { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+
+/* etichetta MOCKUP accanto al nome dell'app (stesso giallo del nastro sull'icona) */
+.brand-nome { display: flex; flex-direction: column; line-height: 1.15; }
+.tag-mockup { display: inline-block; width: fit-content; background: #facc15; color: #1b1f27; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; border-radius: 4px; padding: 1px 6px; margin-top: 3px; }
+p .tag-mockup { margin-top: 0; vertical-align: 1px; }
+
+/* collegamento dentro la riga di sottotitolo (es. Community → membri in anagrafica) */
+.link-sub { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+
+/* Oggi: numero degli avvisi urgenti, come il badge sull'icona */
+.conta-urgenti { color: var(--danger); font-weight: 600; }

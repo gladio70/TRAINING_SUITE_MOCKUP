@@ -2,7 +2,7 @@
 // Nella versione reale sarà sostituito dalle API (Cloudflare Workers + D1).
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, Todo } from './types';
-import { creaDbDemo } from './mock';
+import { creaDbDemo, MODELLO_LINK } from './mock';
 import { carnetAttivo, eliminaClienteDa } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
 
@@ -18,6 +18,8 @@ function carica(): Db {
       const db = JSON.parse(s) as Db;
       // v0.3.6: la cosa da fare demo su Sara Conti ora porta alla sua scheda (dati salvati prima non hanno il collegamento)
       db.todo = db.todo.map((t) => (t.id === 't1' && !t.clienteId && t.testo.includes('Sara Conti') ? { ...t, clienteId: 'lt1' } : t));
+      // v0.4: modello del messaggio con il link di pagamento
+      if (!db.modelli.some((m) => m.id === 'm-link')) db.modelli = [...db.modelli, { id: 'm-link', titolo: 'Link di pagamento', testo: MODELLO_LINK }];
       return db;
     }
   } catch {
@@ -45,6 +47,8 @@ interface Azioni {
   nuovoCliente: (c: Omit<Cliente, 'id' | 'creatoIl'>) => string;
   registraPagamento: (id: string, metodo: Pagamento['metodo']) => void;
   aggiungiPagamento: (p: Omit<Pagamento, 'id'>) => void;
+  segnaLinkInviato: (id: string) => void;
+  simulaPagamentoOnline: (id: string) => void;
   vendiPacchetto: (clienteId: string, prodottoId: string, inizio: string, rate: { importo: number; scadenza: string; pagato: boolean }[], opz: OpzioniVendita) => void;
   proroga: (pacchettoId: string, giorni: number, nota: string) => void;
   aggiungiProdotto: (p: Omit<Prodotto, 'id'>) => void;
@@ -100,6 +104,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     registraPagamento: (id, metodo) =>
       setDb((d) => ({ ...d, pagamenti: d.pagamenti.map((p) => (p.id === id ? { ...p, pagatoIl: oggiIso(), metodo } : p)) })),
     aggiungiPagamento: (p) => setDb((d) => ({ ...d, pagamenti: [...d.pagamenti, { ...p, id: uid() }] })),
+    segnaLinkInviato: (id) => setDb((d) => ({ ...d, pagamenti: d.pagamenti.map((p) => (p.id === id ? { ...p, linkInviato: oggiIso() } : p)) })),
+    // simulazione: il cliente paga online e l'incasso si registra da solo (in F2 lo farà Stripe)
+    simulaPagamentoOnline: (id) =>
+      setDb((d) => ({ ...d, pagamenti: d.pagamenti.map((p) => (p.id === id ? { ...p, pagatoIl: oggiIso(), metodo: 'online', automatico: true } : p)) })),
     vendiPacchetto: (clienteId, prodottoId, inizio, rate, opz) =>
       setDb((d) => {
         const p = d.prodotti.find((x) => x.id === prodottoId)!;

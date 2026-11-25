@@ -2,9 +2,9 @@
 // Una persona può seguire più servizi, ognuno con il suo stato (risposte di Mattia, D-02).
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Trash2, Upload } from 'lucide-react';
+import { Search, Trash2, Upload, UserPlus } from 'lucide-react';
 import { useStore } from '../data/store';
-import { daRichiamare, effettiEliminazione, pacchettiDi, statoPacchetto } from '../data/logic';
+import { daRichiamare, effettiEliminazione, ordineClienti, pacchettiDi, statoPacchetto } from '../data/logic';
 import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente, type StatoServizio } from '../data/types';
 import { fmtDataBreve, toIsoLocale } from '../lib/format';
 import { Avatar, BadgeServizio, FiltroAttivita, Modal } from '../components/ui';
@@ -34,7 +34,8 @@ export function Clienti() {
       ),
     )
     .filter((c) => `${c.nome} ${c.cognome} ${c.email} ${c.telefono}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => a.cognome.localeCompare(b.cognome));
+    // prima i clienti fissati in cima (es. cliente di prova), poi in ordine alfabetico
+    .sort(ordineClienti);
 
   // persone uniche: chi segue più servizi è contato una volta sola
   const conteggi = (Object.keys(ATTIVITA) as Attivita[]).map((a) => ({
@@ -46,20 +47,20 @@ export function Clienti() {
   return (
     <>
       <div className="page-head">
-        <div>
-          <h1>Clienti</h1>
-          <div className="sub">
-            {uniche} persone in carico · {conteggi.map((x) => `${ATTIVITA[x.a].breve} ${x.n}`).join(' · ')} (chi segue più servizi è contato una volta)
+        <div className="titolo-con-azione">
+          <div>
+            <h1>Clienti</h1>
+            <div className="sub">
+              {uniche} persone in carico · {conteggi.map((x) => `${ATTIVITA[x.a].breve} ${x.n}`).join(' · ')} (chi segue più servizi è contato una volta)
+            </div>
           </div>
-        </div>
-        <div className="azioni-pari">
-          <button className="btn primary" onClick={() => setNuovo(true)}>
-            <Plus size={16} /> Nuovo cliente
-          </button>
-          <button className="btn primary" onClick={() => setImporta(true)} title="Importa da Google Sheets">
-            <Upload size={16} /> Importa Sheets
+          <button className="btn primary icona-nuovo" onClick={() => setNuovo(true)} aria-label="Nuovo cliente" title="Nuovo cliente">
+            <UserPlus size={20} />
           </button>
         </div>
+        <button className="btn primary importa-sheets" onClick={() => setImporta(true)} title="Importa da Google Sheets">
+          <Upload size={16} /> Importa da Google Sheets
+        </button>
       </div>
 
       <div className="row" style={{ marginBottom: 14 }}>
@@ -136,8 +137,8 @@ function ConfermaElimina({ cliente, onAnnulla, onElimina }: { cliente: Cliente; 
       [e.sessioni, 'sessione in agenda', 'sessioni in agenda'],
       [e.presenze, 'presenza alle classi', 'presenze alle classi'],
       [e.pagamenti, 'pagamento', 'pagamenti (anche quelli già incassati)'],
-      [e.messaggi, 'messaggio nel registro', 'messaggi nel registro'],
-      [e.cose, 'cosa da fare', 'cose da fare'],
+      [e.messaggi, 'messaggio inviato', 'messaggi inviati'],
+      [e.cose, 'task della Task List', 'task della Task List'],
     ] as [number, string, string][]
   )
     .filter(([n]) => n > 0)
@@ -172,12 +173,13 @@ function ConfermaElimina({ cliente, onAnnulla, onElimina }: { cliente: Cliente; 
   );
 }
 
-export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: () => void }) {
+/** servizioIniziale: per un nuovo cliente, l'attività già selezionata (es. Community dalla pagina Community) */
+export function ClienteForm({ cliente, onClose, servizioIniziale = 'LT' }: { cliente?: Cliente; onClose: () => void; servizioIniziale?: Attivita }) {
   const { nuovoCliente, salvaCliente, eliminaCliente } = useStore();
   const nav = useNavigate();
   const [elimina, setElimina] = useState(false);
   const [c, setC] = useState<Omit<Cliente, 'id' | 'creatoIl'>>(
-    cliente ?? { nome: '', cognome: '', telefono: '', email: '', telegram: '', servizi: [{ attivita: 'LT', stato: 'attivo' }], obiettivi: '', note: '', privacyData: undefined },
+    cliente ?? { nome: '', cognome: '', telefono: '', email: '', telegram: '', servizi: [{ attivita: servizioIniziale, stato: 'attivo' }], obiettivi: '', note: '', privacyData: undefined },
   );
   const set = <K extends keyof typeof c>(k: K, v: (typeof c)[K]) => setC((x) => ({ ...x, [k]: v }));
   const ha = (a: Attivita) => c.servizi.some((s) => s.attivita === a);
@@ -195,7 +197,7 @@ export function ClienteForm({ cliente, onClose }: { cliente?: Cliente; onClose: 
 
   return (
     <Modal
-      titolo={cliente ? 'Modifica cliente' : 'Nuovo cliente'}
+      titolo={cliente ? 'Modifica cliente' : servizioIniziale === 'VC' ? 'Nuovo membro della Community' : 'Nuovo cliente'}
       onClose={onClose}
       footer={
         <>

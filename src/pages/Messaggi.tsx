@@ -1,29 +1,67 @@
 // COM-01/02 (+ anteprima COM-05): messaggi da inviare, modelli con campi automatici, registro invii
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Send } from 'lucide-react';
+import { MessageSquarePlus, Search, Send } from 'lucide-react';
 import { useStore } from '../data/store';
-import { messaggiSuggeriti, nomeCliente, type MessaggioSuggerito } from '../data/logic';
+import { inCarico, messaggiSuggeriti, nomeCliente, ordineClienti, type MessaggioSuggerito } from '../data/logic';
 import { fmtData, fmtOra } from '../lib/format';
 import { InvioMessaggio } from '../components/InvioMessaggio';
+import { Avatar, BadgeServizio, Modal } from '../components/ui';
+
+/** Nuovo messaggio: scelta del destinatario tra le persone in carico, con ricerca per nome */
+function ScegliDestinatario({ onClose, onScelto }: { onClose: () => void; onScelto: (clienteId: string) => void }) {
+  const { db } = useStore();
+  const [q, setQ] = useState('');
+  const persone = db.clienti
+    .filter((c) => inCarico(c))
+    .filter((c) => `${c.nome} ${c.cognome}`.toLowerCase().includes(q.toLowerCase()))
+    .sort(ordineClienti);
+  return (
+    <Modal titolo="Nuovo messaggio: a chi?" onClose={onClose}>
+      <div className="search" style={{ marginBottom: 8 }}>
+        <Search size={16} />
+        <input className="field" autoFocus placeholder="Cerca nome…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div className="list scegli-destinatario">
+        {persone.length === 0 && <div className="empty">Nessuno trovato.</div>}
+        {persone.map((c) => (
+          <button key={c.id} className="item" onClick={() => onScelto(c.id)}>
+            <Avatar c={c} />
+            <span className="grow t">{c.cognome} {c.nome}</span>
+            <span className="row" style={{ gap: 4 }}>
+              {c.servizi.filter((s) => s.stato !== 'terminato').map((s) => <BadgeServizio key={s.attivita} s={s} breve />)}
+            </span>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  );
+}
 
 export function Messaggi() {
   const { db, aggiornaModello } = useStore();
   const [tab, setTab] = useState<'da-inviare' | 'modelli' | 'registro'>('da-inviare');
   const [msg, setMsg] = useState<MessaggioSuggerito | null>(null);
+  const [scegli, setScegli] = useState(false); // nuovo messaggio: scelta del destinatario
+  const [nuovoPer, setNuovoPer] = useState<string | null>(null);
   const sugg = messaggiSuggeriti(db);
 
   return (
     <>
       <div className="page-head">
-        <div>
-          <h1>Messaggi</h1>
-          <div className="sub">Invio con un tocco su WhatsApp, Telegram o email</div>
+        <div className="titolo-con-azione">
+          <div>
+            <h1>Messaggi</h1>
+            <div className="sub">Invio con un tocco su WhatsApp, Telegram o email</div>
+          </div>
+          <button className="btn primary icona-nuovo" onClick={() => setScegli(true)} aria-label="Nuovo messaggio" title="Nuovo messaggio">
+            <MessageSquarePlus size={20} />
+          </button>
         </div>
         <div className="tabs">
           <button className={tab === 'da-inviare' ? 'on' : ''} onClick={() => setTab('da-inviare')}>Da inviare ({sugg.length})</button>
           <button className={tab === 'modelli' ? 'on' : ''} onClick={() => setTab('modelli')}>Modelli</button>
-          <button className={tab === 'registro' ? 'on' : ''} onClick={() => setTab('registro')}>Registro</button>
+          <button className={tab === 'registro' ? 'on' : ''} onClick={() => setTab('registro')}>Inviati</button>
         </div>
       </div>
 
@@ -34,13 +72,14 @@ export function Messaggi() {
             {sugg.map((m) => {
               const c = db.clienti.find((x) => x.id === m.clienteId);
               return (
-                <div key={m.chiave} className="item">
-                  <div className="grow">
-                    <div className="t"><Link to={`/clienti/${m.clienteId}`}>{nomeCliente(c)}</Link></div>
-                    <div className="d">{m.motivo}</div>
+                // stesso schema per tutti (promemoria, rinnovi, solleciti, riprese): nome, motivo, poi tipo a sinistra e "Prepara" a destra
+                <div key={m.chiave} className="msg-da-inviare">
+                  <div className="t"><Link to={`/clienti/${m.clienteId}`}>{nomeCliente(c)}</Link></div>
+                  <div className="d">{m.motivo}</div>
+                  <div className="msg-piede">
+                    <span className="badge neutral">{db.modelli.find((x) => x.id === m.modelloId)?.titolo}</span>
+                    <button className="btn sm wa" onClick={() => setMsg(m)}><Send size={14} /> Prepara</button>
                   </div>
-                  <span className="badge neutral">{db.modelli.find((x) => x.id === m.modelloId)?.titolo}</span>
-                  <button className="btn sm wa" onClick={() => setMsg(m)}><Send size={14} /> Prepara</button>
                 </div>
               );
             })}
@@ -84,6 +123,16 @@ export function Messaggi() {
       )}
 
       {msg && <InvioMessaggio clienteId={msg.clienteId} modelloId={msg.modelloId} campi={msg.campi} chiave={msg.chiave} onClose={() => setMsg(null)} />}
+      {scegli && (
+        <ScegliDestinatario
+          onClose={() => setScegli(false)}
+          onScelto={(id) => {
+            setScegli(false);
+            setNuovoPer(id);
+          }}
+        />
+      )}
+      {nuovoPer && <InvioMessaggio clienteId={nuovoPer} onClose={() => setNuovoPer(null)} />}
     </>
   );
 }

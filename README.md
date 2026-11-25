@@ -1,6 +1,6 @@
 # TRAINING SUITE – mockup F1
 
-Nome dell'app confermato: **TRAINING SUITE**. Dominio ed email ancora da concordare (D-09). La cartella e il repository restano `TRAINING_SUITE` / `TRAINING_SUITE_MOCKUP`.
+Nome dell'app confermato: **TRAINING SUITE**. Dominio ed email ancora da concordare (D-09). Cartella locale e repository: `TRAINING_SUITE_MOCKUP`.
 
 Gestionale per i servizi di coaching di Mattia (Virgin Active, Life Training, Verticalisthenics Community).
 Specifiche: cartella `REQUISITI\` (documenti di lavoro, esclusi dal repository).

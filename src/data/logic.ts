@@ -6,6 +6,23 @@ import { aggiungiGiorni, fmtData, fmtDataBreve, fmtEuro, fmtOra, giorniTra, iniz
 
 export const nomeCliente = (c?: Cliente) => (c ? `${c.nome} ${c.cognome}` : '—');
 
+/** Ordine standard degli elenchi di persone: prima i clienti fissati in cima, poi per cognome */
+export const ordineClienti = (a: Cliente, b: Cliente) => Number(!!b.fissato) - Number(!!a.fissato) || a.cognome.localeCompare(b.cognome);
+
+/**
+ * Clienti "fissati in cima" (es. il cliente di prova): in ogni elenco vengono per primi, il resto mantiene il suo ordine.
+ * idDi restituisce il cliente (o i clienti) di ogni voce.
+ */
+export function fissatiPrima<T>(db: Db, lista: T[], idDi: (x: T) => string | string[] | undefined): T[] {
+  const fissati = new Set(db.clienti.filter((c) => c.fissato).map((c) => c.id));
+  if (!fissati.size) return lista;
+  const eFissato = (x: T) => {
+    const id = idDi(x);
+    return (Array.isArray(id) ? id : id ? [id] : []).some((i) => fissati.has(i));
+  };
+  return [...lista.filter(eFissato), ...lista.filter((x) => !eFissato(x))];
+}
+
 // ---------- clienti e servizi ----------
 
 export const attivitaDi = (c: Cliente): Attivita[] => c.servizi.map((s) => s.attivita);
@@ -121,6 +138,7 @@ export interface Avviso {
   titolo: string;
   dettaglio: string;
   link: string;
+  clienti?: string[]; // clienti coinvolti (per mettere in cima i clienti fissati)
 }
 
 export function calcolaAvvisi(db: Db): Avviso[] {
@@ -139,13 +157,13 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     const soglia = sogliaResidue(db, k);
     if (s.giorni >= 0 && soglia != null && s.residue != null && s.residue <= soglia) {
       out.push({
-        id: `res-${k.id}`, tipo: 'residue', priorita: s.residue <= 0 ? 0 : 1, attivita: att,
+        id: `res-${k.id}`, tipo: 'residue', priorita: s.residue <= 0 ? 0 : 1, attivita: att, clienti: titolariDi(k),
         titolo: `${chi}: ${s.residue <= 0 ? 'pacchetto esaurito' : `${s.residue} sessioni residue`}`, dettaglio: s.nome, link,
       });
     }
     if (s.giorni <= db.soglie.giorniScadenza && s.giorni >= -30 && !(s.residue != null && s.residue <= 0)) {
       out.push({
-        id: `scad-${k.id}`, tipo: 'scadenza', priorita: s.giorni < 0 ? 0 : s.giorni <= 1 ? 1 : 2, attivita: att,
+        id: `scad-${k.id}`, tipo: 'scadenza', priorita: s.giorni < 0 ? 0 : s.giorni <= 1 ? 1 : 2, attivita: att, clienti: titolariDi(k),
         titolo: `${chi}: ${s.giorni < 0 ? 'scaduto' : s.giorni === 0 ? 'scade oggi' : `scade tra ${s.giorni} giorni`}`,
         dettaglio: `${s.nome} · ${fmtDataBreve(k.scadenza)}`, link,
       });
@@ -156,7 +174,7 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     const c = cli(pg.clienteId);
     if (st === 'scaduto' || (st === 'da pagare' && giorniTra(oggi, new Date(pg.scadenza)) <= 7)) {
       out.push({
-        id: `pag-${pg.id}`, tipo: 'pagamento', priorita: st === 'scaduto' ? 0 : 2, attivita: pg.attivita,
+        id: `pag-${pg.id}`, tipo: 'pagamento', priorita: st === 'scaduto' ? 0 : 2, attivita: pg.attivita, clienti: [pg.clienteId],
         titolo: `${nomeCliente(c)}: ${fmtEuro(pg.importo)} ${st === 'scaduto' ? 'scaduto' : 'in scadenza'}`,
         dettaglio: `${pg.descrizione} · ${fmtDataBreve(pg.scadenza)}`, link: `/pagamenti?filtro=${st === 'scaduto' ? 'scaduti' : 'aperti'}`,
       });
@@ -166,7 +184,7 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     const classe = !!a.presenze;
     if (!a.esito && !classe && new Date(a.inizio) < ora && new Date(a.inizio) >= aggiungiGiorni(oggi, -7)) {
       out.push({
-        id: `esi-${a.id}`, tipo: 'esito', priorita: stessoGiorno(a.inizio, oggi) ? 1 : 0, attivita: a.attivita,
+        id: `esi-${a.id}`, tipo: 'esito', priorita: stessoGiorno(a.inizio, oggi) ? 1 : 0, attivita: a.attivita, clienti: a.clienteId ? [a.clienteId, ...(a.con ?? [])] : undefined,
         titolo: `Esito da registrare: ${nomeAppuntamento(db, a)}`,
         dettaglio: `${fmtData(a.inizio)} ${fmtOra(a.inizio)} · ${a.servizio}`, link: `/agenda?giorno=${a.inizio.slice(0, 10)}`,
       });
@@ -179,7 +197,7 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     }
     if (a.daConfermare && new Date(a.inizio) >= oggi) {
       out.push({
-        id: `conf-${a.id}`, tipo: 'conferma', priorita: 1, attivita: a.attivita,
+        id: `conf-${a.id}`, tipo: 'conferma', priorita: 1, attivita: a.attivita, clienti: a.clienteId ? [a.clienteId] : undefined,
         titolo: `${a.servizio} da confermare: ${nomeAppuntamento(db, a)}`, dettaglio: `${fmtData(a.inizio)} ${fmtOra(a.inizio)}`,
         link: `/agenda?giorno=${a.inizio.slice(0, 10)}`,
       });
@@ -189,13 +207,13 @@ export function calcolaAvvisi(db: Db): Avviso[] {
   for (const { cliente: c, servizio: s, giorni: d } of daRichiamare(db)) {
     if (s.ripresa && d != null) {
       out.push({
-        id: `ric-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: s.attivita,
+        id: `ric-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: s.attivita, clienti: [c.id],
         titolo: `Richiamare ${nomeCliente(c)}`,
         dettaglio: `${STATI[s.stato].nome} · ${s.stato === 'pausa' ? 'ripresa prevista' : 'richiamo'} ${fmtDataBreve(s.ripresa)}`, link: `/clienti/${c.id}`,
       });
     } else {
       out.push({
-        id: `ver-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: 2, attivita: s.attivita,
+        id: `ver-${c.id}-${s.attivita}`, tipo: 'richiamo', priorita: 2, attivita: s.attivita, clienti: [c.id],
         titolo: `Da verificare: ${nomeCliente(c)}`, dettaglio: s.nota ?? ATTIVITA[s.attivita].nome, link: `/clienti/${c.id}`,
       });
     }
@@ -205,14 +223,15 @@ export function calcolaAvvisi(db: Db): Avviso[] {
     const d = giorniTra(oggi, new Date(t.data));
     if (d <= 7) {
       out.push({
-        id: `todo-${t.id}`, tipo: 'todo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: t.attivita,
+        id: `todo-${t.id}`, tipo: 'todo', priorita: d < 0 ? 0 : d === 0 ? 1 : 2, attivita: t.attivita, clienti: t.clienteId ? [t.clienteId] : undefined,
         titolo: t.testo, dettaglio: `${t.categoria === 'amministrazione' ? 'Amministrazione · ' : ''}${d < 0 ? 'In ritardo' : d === 0 ? 'Oggi' : `entro ${fmtData(t.data)}`}`,
         // con un cliente si apre la sua scheda; altrimenti la pagina Oggi scorre al riquadro "Cose da fare"
         link: t.clienteId ? `/clienti/${t.clienteId}` : '/?vai=cose-da-fare',
       });
     }
   }
-  return out.sort((a, b) => a.priorita - b.priorita);
+  // per priorità; dentro ogni gruppo prima i clienti fissati in cima
+  return ([0, 1, 2] as Priorita[]).flatMap((p) => fissatiPrima(db, out.filter((a) => a.priorita === p), (a) => a.clienti));
 }
 
 // ---------- messaggi ----------
@@ -267,7 +286,7 @@ export function messaggiSuggeriti(db: Db): MessaggioSuggerito[] {
       });
     }
   }
-  return out.filter((m) => !inviati.has(m.chiave));
+  return fissatiPrima(db, out.filter((m) => !inviati.has(m.chiave)), (m) => m.clienteId);
 }
 
 export function testoMessaggio(db: Db, modelloId: string, c: Cliente, campi: Record<string, string> = {}) {
@@ -384,7 +403,13 @@ export function dettaglioMese(db: Db, rif = new Date()) {
   }
   erogate.sort(perData((x) => x.data));
   const costi = db.costi.filter((c) => nel(c.data)).sort(perData((c) => c.data));
-  return { venduti, incassati, daIncassare, erogate, costi };
+  return {
+    venduti: fissatiPrima(db, venduti, (v) => titolariDi(v.k)),
+    incassati: fissatiPrima(db, incassati, (p) => p.clienteId),
+    daIncassare: fissatiPrima(db, daIncassare, (p) => p.clienteId),
+    erogate: fissatiPrima(db, erogate, (e) => e.clienteId),
+    costi,
+  };
 }
 
 // ---------- eliminazione di un cliente (GDPR, NFR-04: diritto alla cancellazione) ----------

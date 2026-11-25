@@ -7,7 +7,7 @@ import { attivitaDi, calcolaAvvisi, daRichiamare, economiaMese, daSeguire, messa
 import type { Attivita } from '../data/types';
 import { aggiungiGiorni, fmtDataLunga, fmtEuro, inizioGiorno, inizioSettimana, stessoGiorno, toIsoLocale } from '../lib/format';
 import { FiltroAttivita, MostraAltri, VOCI_VISIBILI } from '../components/ui';
-import { NuovoAppuntamento, RigaAppuntamento } from '../components/Appuntamenti';
+import { RigaAppuntamento } from '../components/Appuntamenti';
 import { InvioMessaggio } from '../components/InvioMessaggio';
 import type { MessaggioSuggerito } from '../data/logic';
 
@@ -36,7 +36,6 @@ export function Dashboard() {
     return () => clearTimeout(t);
   }, [evidenzia]);
   const [filtro, setFiltro] = useState<Attivita | 'tutte'>('tutte');
-  const [nuovo, setNuovo] = useState(false);
   const [msg, setMsg] = useState<MessaggioSuggerito | null>(null);
   const [todoTxt, setTodoTxt] = useState('');
   const ok = (a?: Attivita) => filtro === 'tutte' || a === filtro;
@@ -83,9 +82,6 @@ export function Dashboard() {
         </div>
         <div className="row">
           <FiltroAttivita valore={filtro} onChange={setFiltro} />
-          <button className="btn primary" onClick={() => setNuovo(true)}>
-            <Plus size={16} /> Appuntamento
-          </button>
         </div>
       </div>
 
@@ -150,7 +146,7 @@ export function Dashboard() {
 
           <div className={`card ${evidenzia ? 'evidenziata' : ''}`} ref={coseDaFare}>
             <div className="card-head">
-              <h2>Cose da fare</h2>
+              <h2>Task List</h2>
             </div>
             {visibili(todoOggi, 'todo').map((t) => (
               <label key={t.id} className={`todo ${t.fatto ? 'fatto' : ''}`}>
@@ -172,7 +168,7 @@ export function Dashboard() {
                 setTodoTxt('');
               }}
             >
-              <input className="field" style={{ flex: 1 }} placeholder="Aggiungi una cosa da fare…" value={todoTxt} onChange={(e) => setTodoTxt(e.target.value)} />
+              <input className="field" style={{ flex: 1 }} placeholder="Aggiungi un task…" value={todoTxt} onChange={(e) => setTodoTxt(e.target.value)} />
               <button className="btn"><Plus size={16} /></button>
             </form>
           </div>
@@ -184,7 +180,8 @@ export function Dashboard() {
               <h2>
                 <AlertTriangle size={16} style={{ verticalAlign: -2 }} /> Richiede attenzione
               </h2>
-              <span className="muted small">{avvisi.length} avvisi</span>
+              {/* stesso numero del badge sull'icona Oggi: solo gli avvisi urgenti (scaduti / in ritardo) */}
+              <span className="small conta-urgenti">{avvisi.filter((a) => a.priorita === 0).length} avvisi urgenti</span>
             </div>
             {avvisi.length === 0 && <div className="empty">Tutto in ordine.</div>}
             <div className="list">
@@ -219,14 +216,16 @@ export function Dashboard() {
             {suggeriti.length === 0 && <div className="empty">Nessun messaggio in sospeso.</div>}
             <div className="list">
               {visibili(suggeriti, 'msg').map((m) => (
-                <div key={m.chiave} className="item">
-                  <div className="grow">
-                    <div className="t">{nomeCliente(db.clienti.find((c) => c.id === m.clienteId))}</div>
-                    <div className="d">{m.motivo}</div>
+                // stesso schema della pagina Messaggi: nome, motivo, poi tipo a sinistra e "Prepara" a destra
+                <div key={m.chiave} className="msg-da-inviare">
+                  <div className="t">{nomeCliente(db.clienti.find((c) => c.id === m.clienteId))}</div>
+                  <div className="d">{m.motivo}</div>
+                  <div className="msg-piede">
+                    <span className="badge neutral">{db.modelli.find((x) => x.id === m.modelloId)?.titolo}</span>
+                    <button className="btn sm wa" onClick={() => setMsg(m)}>
+                      <Send size={14} /> Prepara
+                    </button>
                   </div>
-                  <button className="btn sm wa" onClick={() => setMsg(m)}>
-                    <Send size={14} /> Prepara
-                  </button>
                 </div>
               ))}
             </div>
@@ -235,7 +234,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {nuovo && <NuovoAppuntamento onClose={() => setNuovo(false)} />}
       {msg && <InvioMessaggio clienteId={msg.clienteId} modelloId={msg.modelloId} campi={msg.campi} chiave={msg.chiave} onClose={() => setMsg(null)} />}
     </>
   );

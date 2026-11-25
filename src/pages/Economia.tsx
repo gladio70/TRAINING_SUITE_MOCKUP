@@ -126,18 +126,18 @@ export function Economia() {
   return (
     <>
       <div className="page-head">
-        <div style={{ width: '100%' }}>
+        <div>
           <h1>Report Economico</h1>
-          {/* nome del mese e selettore sulla stessa riga, come nella pagina Pagamenti */}
-          <div className="riga-mese">
-            <div className="sub" style={{ textTransform: 'capitalize' }}>{ini.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</div>
-            <div className="periodo">
-              <button className="btn sm" onClick={() => sposta(-1)} aria-label="Mese precedente"><ChevronLeft size={16} /></button>
-              <button className="btn sm" onClick={() => setRif(new Date())}>Questo mese</button>
-              <button className="btn sm" onClick={() => sposta(1)} aria-label="Mese successivo"><ChevronRight size={16} /></button>
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* navigatore del mese al centro, come nella pagina Pagamenti: il nome del mese riporta al mese corrente */}
+      <div className="navigatore-mese">
+        <button className="btn sm" onClick={() => sposta(-1)} aria-label="Mese precedente"><ChevronLeft size={16} /></button>
+        <button className="btn sm mese" onClick={() => setRif(new Date())} title="Torna al mese corrente">
+          {ini.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+        </button>
+        <button className="btn sm" onClick={() => sposta(1)} aria-label="Mese successivo"><ChevronRight size={16} /></button>
       </div>
 
       <div className="banner">

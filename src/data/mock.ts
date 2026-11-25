@@ -100,6 +100,14 @@ const clienti: Cliente[] = anag.map(([id, nome, cognome, servizi, obiettivi, not
   creatoIl: g(-90 - i * 6),
 }));
 
+// Cliente di prova con DATI REALI per i test interni (richiesto dall'utente il 25/11/2026), fissato in cima all'elenco.
+// Attenzione: il mockup è pubblico, quindi questi recapiti sono visibili a chiunque apra il sito o il repository.
+clienti.unshift({
+  id: 'cn1', nome: 'Claudio', cognome: 'Nanni', telefono: '+39 338 4758583', email: 'cnanni70@gmail.com', telegram: '@gladio70',
+  servizi: [{ attivita: 'VA', stato: 'attivo', nota: 'Cliente di prova con dati reali (test interno)' }],
+  obiettivi: 'Test del mockup con dati reali', note: '', privacyData: g(0), creatoIl: g(0), fissato: true,
+});
+
 // ---------- pacchetti (PAC-02) ----------
 // [id, titolare, prodotto, inizio (giorni da oggi), usate prima, opzioni]
 type K = [string, string, string, number, number, { formula?: Formula; con?: string[]; tot?: number; storico?: string; prezzo?: number; validita?: number }?];
@@ -128,6 +136,7 @@ const pk: K[] = [
   ['k-va10', 'va10', 'va-sing', -80, 1],
   ['k-va11', 'va11', 'va-pt10', 4, 0, { formula: 'scambio' }],
   ['k-va12', 'va12', 'va-pt10', 4, 0, { formula: 'scambio' }],
+  ['k-cn1', 'cn1', 'va-pt4', -2, 0],
   ['k-vc1', 'vc1', 'vc-c5', -32, 2],
   ['k-vc2', 'vc2', 'vc-c5', -9, 0],
   ['k-vc-lt1', 'lt1', 'vc-c5', -14, 1],
@@ -237,6 +246,12 @@ for (let w = -1; w <= 2; w++) {
   }
 }
 
+// cliente di prova: appuntamento domani alle 18, così compare il promemoria da inviare
+appuntamenti.push({
+  id: 'a-cn1', attivita: 'VA', servizio: 'Personal Training', luogo: 'Virgin Active', inizio: at(aggiungiGiorni(oggi, 1), 18), durataMin: 60,
+  clienteId: 'cn1', pacchettoId: 'k-cn1',
+});
+
 // Body Check gratuiti dei nuovi iscritti Virgin (contatti fittizi: V-01) – 3 programmati e 1 da confermare
 const bc: [number, number, string, boolean?, Esito?][] = [
   [-5, 11, 'Nuovo iscritto A (contatto fittizio)', false, 'effettuata'],
@@ -267,6 +282,8 @@ const speciali: Record<string, (base: Omit<Pagamento, 'id' | 'descrizione' | 'im
   'k-lt2': (b, k, nome) => [{ ...b, id: 'pg-lt2', descrizione: nome, importo: k.prezzo, scadenza: g(-3) }],
   'k-vc2': (b, k, nome) => [{ ...b, id: 'pg-vc2', descrizione: nome, importo: k.prezzo, scadenza: g(0) }],
   'k-vc8': (b, k, nome) => [{ ...b, id: 'pg-vc8', descrizione: nome, importo: k.prezzo, scadenza: g(2) }],
+  // cliente di prova: pagamento ancora aperto, per provare "Link" e "Simula online"
+  'k-cn1': (b, k, nome) => [{ ...b, id: 'pg-cn1', descrizione: nome, importo: k.prezzo, scadenza: g(3) }],
   'k-va6': (b, k, nome) => [{ ...b, id: 'pg-va6', descrizione: `${nome} (condiviso)`, importo: k.prezzo, scadenza: k.inizio, pagatoIl: k.inizio, metodo: 'contanti' }],
 };
 pacchetti.forEach((k, i) => {
@@ -290,6 +307,10 @@ const costi: Costo[] = [
   { id: 'co4', descrizione: 'Software e app (comune)', categoria: 'software', importo: 12, data: primoDelMese(0) },
 ];
 
+/** Messaggio con il link di pagamento online (anteprima PAC-05: nel mockup il link è finto) */
+export const MODELLO_LINK =
+  'Ciao {nome}, ecco il link per pagare {descrizione} ({importo}) con carta, Apple Pay o Google Pay: {link}. Il pagamento si registra da solo. Grazie!';
+
 export function creaDbDemo(): Db {
   return {
     clienti,
@@ -305,6 +326,7 @@ export function creaDbDemo(): Db {
       { id: 'm-conf', titolo: 'Conferma appuntamento', testo: 'Ciao {nome}, confermato: {data} alle {ora} ({luogo}).' },
       { id: 'm-rinn', titolo: 'Rinnovo pacchetto', testo: 'Ciao {nome}, il tuo {pacchetto} sta per terminare ({residue} sessioni residue, scadenza {scadenza}). Vuoi che ti prepari il rinnovo?' },
       { id: 'm-soll', titolo: 'Sollecito pagamento', testo: 'Ciao {nome}, ti ricordo il pagamento di {importo} per {descrizione}, scaduto il {scadenza}. Grazie!' },
+      { id: 'm-link', titolo: 'Link di pagamento', testo: MODELLO_LINK },
       { id: 'm-ripr', titolo: 'Ripresa allenamenti', testo: 'Ciao {nome}, come stai? Ci eravamo detti di risentirci per riprendere gli allenamenti: ti va di fissare la prossima sessione?' },
       { id: 'm-disd', titolo: 'Regole di disdetta', testo: 'Ciao {nome}, ti ricordo che le sessioni vanno disdette con almeno 24 ore di anticipo; in caso contrario la sessione viene conteggiata.' },
     ],

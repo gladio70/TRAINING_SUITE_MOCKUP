@@ -2,7 +2,7 @@
 // per sostituire progressivamente APP Palestre. La prenotazione autonoma degli allievi resta in F3 (GRP-02).
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarRange, Info, Send } from 'lucide-react';
+import { CalendarRange, Info, Send, Users } from 'lucide-react';
 import { useStore } from '../data/store';
 import { inCarico, nomeCliente, prodottoDi, statoPacchetto, titolariDi } from '../data/logic';
 import type { PacchettoCliente } from '../data/types';
@@ -10,7 +10,9 @@ import { aggiungiGiorni, fmtData, fmtDataBreve, inizioGiorno } from '../lib/form
 import { RigaAppuntamento } from '../components/Appuntamenti';
 import { InvioMessaggio } from '../components/InvioMessaggio';
 import { PresenzeModal } from '../components/Presenze';
+import { IconaConPiu } from '../components/ui';
 import { ProrogaModal } from './ClienteDettaglio';
+import { ClienteForm } from './Clienti';
 
 const MEMBRI_WHATSAPP = 89; // dato dichiarato da Mattia al 24/11/2026
 
@@ -19,6 +21,7 @@ export function Community() {
   const [proroga, setProroga] = useState<PacchettoCliente | null>(null);
   const [rinnovo, setRinnovo] = useState<{ clienteId: string; k: PacchettoCliente } | null>(null);
   const [presenze, setPresenze] = useState<string | null>(null);
+  const [nuovoMembro, setNuovoMembro] = useState(false);
   const oggi = inizioGiorno();
   const ora = new Date();
 
@@ -41,15 +44,26 @@ export function Community() {
     (c) => inCarico(c, 'VC') && !carnet.some(({ k, s }) => !s.scaduto && titolariDi(k).includes(c.id)) && !programmazioni.some(({ k }) => k.clienteId === c.id),
   );
   const nome = (id: string) => nomeCliente(db.clienti.find((c) => c.id === id));
+  // persone della Community registrate in anagrafica (gli altri membri del gruppo WhatsApp non sono clienti)
+  const inAnagrafica = db.clienti.filter((c) => c.servizi.some((s) => s.attivita === 'VC')).length;
 
   return (
     <>
       <div className="page-head">
-        <div>
+        <div className="titolo-con-azione">
+          <div>
           <h1>Community</h1>
           <div className="sub">
-            Gruppo WhatsApp {MEMBRI_WHATSAPP} membri · {attivi} carnet validi · {programmazioni.filter(({ s }) => !s.scaduto).length} programmazioni aggiuntive
+            Gruppo WhatsApp{' '}
+            <Link to="/clienti?att=VC&stato=tutti" className="link-sub" title="Apri l’anagrafica dei membri della Community">
+              {MEMBRI_WHATSAPP} membri ({inAnagrafica} in anagrafica)
+            </Link>{' '}
+            · {attivi} carnet validi · {programmazioni.filter(({ s }) => !s.scaduto).length} programmazioni aggiuntive
           </div>
+          </div>
+          <button className="btn primary icona-nuovo" onClick={() => setNuovoMembro(true)} aria-label="Nuovo membro" title="Nuovo membro della Community">
+            <IconaConPiu icona={Users} />
+          </button>
         </div>
       </div>
 
@@ -170,6 +184,7 @@ export function Community() {
       </div>
 
       {proroga && <ProrogaModal k={proroga} onClose={() => setProroga(null)} />}
+      {nuovoMembro && <ClienteForm servizioIniziale="VC" onClose={() => setNuovoMembro(false)} />}
       {presenze && <PresenzeModal appuntamentoId={presenze} onClose={() => setPresenze(null)} />}
       {rinnovo && (
         <InvioMessaggio

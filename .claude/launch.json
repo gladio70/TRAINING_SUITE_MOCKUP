@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "training_suite",
-      "runtimeExecutable": "C:\\ClaudeAI\\TRAINING_SUITE\\_toolchain\\node\\node.exe",
+      "runtimeExecutable": "C:\\ClaudeAI\\TRAINING_SUITE_MOCKUP\\_toolchain\\node\\node.exe",
       "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5180", "--strictPort"],
       "port": 5180
     }

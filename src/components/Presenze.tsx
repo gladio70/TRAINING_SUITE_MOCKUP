@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
 import { useStore } from '../data/store';
-import { carnetAttivo, inCarico, prodottoDi, statoPacchetto } from '../data/logic';
+import { carnetAttivo, inCarico, ordineClienti, prodottoDi, statoPacchetto } from '../data/logic';
 import { fmtData, fmtOra } from '../lib/format';
 import { Modal } from './ui';
 
@@ -17,7 +17,7 @@ export function PresenzeModal({ appuntamentoId, onClose }: { appuntamentoId: str
   const membri = db.clienti
     .filter((c) => inCarico(c, 'VC') || presenti.has(c.id))
     .filter((c) => `${c.nome} ${c.cognome}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((x, y) => Number(presenti.has(y.id)) - Number(presenti.has(x.id)) || x.cognome.localeCompare(y.cognome));
+    .sort((x, y) => Number(presenti.has(y.id)) - Number(presenti.has(x.id)) || ordineClienti(x, y));
 
   return (
     <Modal

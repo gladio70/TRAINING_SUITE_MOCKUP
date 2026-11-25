@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X, type LucideIcon } from 'lucide-react';
 
 /**
  * Campo numerico che si può svuotare e riscrivere: mentre si scrive accetta anche il campo vuoto
@@ -46,6 +46,18 @@ export function CampoNumero({ valore, onChange, min, max, step, disabled, placeh
         setTesto(String(valido));
       }}
     />
+  );
+}
+
+/** Icona con un piccolo "+" in basso a destra, per le azioni "nuovo" che non hanno un'icona con il + già pronta */
+export function IconaConPiu({ icona: Icona, size = 20 }: { icona: LucideIcon; size?: number }) {
+  return (
+    <span className="icona-piu">
+      <Icona size={size} />
+      <span className="piu">
+        <Plus size={Math.round(size * 0.55)} strokeWidth={3} />
+      </span>
+    </span>
   );
 }
 

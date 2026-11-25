@@ -1,7 +1,7 @@
 // AGE-01..03 + DASH-02: agenda giorno / settimana / mese, carico ore per attività
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '../data/store';
 import { nomeAppuntamento, oreAppuntamenti } from '../data/logic';
 import { ATTIVITA, type Appuntamento, type Attivita } from '../data/types';
@@ -34,6 +34,14 @@ export function Agenda() {
     else if (vista === 'settimana') setRif(aggiungiGiorni(rif, dir * 7));
     else setRif(new Date(rif.getFullYear(), rif.getMonth() + dir, 1));
   };
+  // swipe: ricorda dove è iniziato il tocco e il verso, per l'animazione di scivolamento
+  const tocco = useRef<{ x: number; y: number } | null>(null);
+  const [verso, setVerso] = useState(0);
+  const vaiA = (dir: number) => {
+    setVerso(dir);
+    sposta(dir);
+  };
+  const [impulso, setImpulso] = useState(0); // fa ripartire l'animazione anche quando il periodo non cambia
 
   // intervallo visibile, per il riepilogo ore
   let da: Date, a: Date, titolo: string;
@@ -51,6 +59,15 @@ export function Agenda() {
     titolo = da.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
   }
   const inPeriodo = lista.filter((x) => new Date(x.inizio) >= da && new Date(x.inizio) < a);
+
+  // "Oggi": se oggi è in un altro periodo il calendario scivola verso di esso, altrimenti lampeggia (si vede che il tasto ha risposto)
+  const vaiOggi = () => {
+    const oggi = inizioGiorno();
+    const dir = oggi < da ? -1 : oggi >= a ? 1 : 0;
+    setVerso(dir === 0 ? 2 : dir);
+    setImpulso((n) => n + 1);
+    setRif(oggi);
+  };
 
   if (soloEsiti) {
     const daRegistrare = db.appuntamenti
@@ -81,9 +98,19 @@ export function Agenda() {
   return (
     <>
       <div className="page-head">
-        <div>
-          <h1>Agenda</h1>
-          <div className="sub" style={{ textTransform: 'capitalize' }}>{titolo}</div>
+        <div className="titolo-con-azione">
+          <div>
+            <h1>Agenda</h1>
+            <div className="sub" style={{ textTransform: 'capitalize' }}>{titolo}</div>
+          </div>
+          <button
+            className="btn primary icona-nuovo"
+            onClick={() => setNuovo(vista === 'giorno' ? rif : aggiungiGiorni(inizioGiorno(), 1))}
+            aria-label="Nuovo appuntamento"
+            title="Nuovo appuntamento"
+          >
+            <CalendarPlus size={20} />
+          </button>
         </div>
         <div className="row toolbar">
           <div className="tabs">
@@ -93,43 +120,60 @@ export function Agenda() {
               </button>
             ))}
           </div>
-          <div className="toolbar-riga">
-            <div className="periodo">
-              <button className="btn sm" onClick={() => sposta(-1)} aria-label="Precedente"><ChevronLeft size={16} /></button>
-              <button className="btn sm" onClick={() => setRif(inizioGiorno())}>Oggi</button>
-              <button className="btn sm" onClick={() => sposta(1)} aria-label="Successivo"><ChevronRight size={16} /></button>
-            </div>
-            <button className="btn primary" onClick={() => setNuovo(vista === 'giorno' ? rif : aggiungiGiorni(inizioGiorno(), 1))}>
-              <Plus size={16} /> Nuovo
-            </button>
-          </div>
         </div>
       </div>
 
-      <div className="row" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 10 }}>
         <FiltroAttivita valore={filtro} onChange={setFiltro} />
       </div>
 
+      {/* navigatore del periodo: frecce ai lati, "Oggi" piccolo al centro */}
+      <div className="navigatore-periodo">
+        <button className="btn sm" onClick={() => vaiA(-1)} aria-label="Precedente"><ChevronLeft size={16} /></button>
+        <button className="btn sm" onClick={vaiOggi}>Oggi</button>
+        <button className="btn sm" onClick={() => vaiA(1)} aria-label="Successivo"><ChevronRight size={16} /></button>
+      </div>
+
       <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
-        {vista === 'giorno' && (
-          <div className="card">
-            {inPeriodo.length === 0 && <div className="empty">Nessun appuntamento.</div>}
-            {inPeriodo.map((x) => (
-              <RigaAppuntamento key={x.id} a={x} />
-            ))}
-          </div>
-        )}
-        {vista === 'settimana' && <Settimana lun={da} lista={inPeriodo} onApri={setAperto} />}
-        {vista === 'mese' && (
-          <Mese
-            mese={da}
-            lista={lista}
-            onGiorno={(d) => {
-              setRif(d);
-              setVista('giorno');
+        {
+          // swipe orizzontale (giorno, settimana, mese): verso sinistra il periodo successivo, verso destra il precedente
+          <div
+            key={`${vista}-${da.toISOString()}-${impulso}`}
+            className={`swipe ${verso === 2 ? 'lampo' : verso > 0 ? 'da-destra' : verso < 0 ? 'da-sinistra' : ''}`}
+            onTouchStart={(e) => {
+              tocco.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }}
-          />
-        )}
+            onTouchEnd={(e) => {
+              const t = tocco.current;
+              tocco.current = null;
+              if (!t) return;
+              const dx = e.changedTouches[0].clientX - t.x;
+              const dy = e.changedTouches[0].clientY - t.y;
+              if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) vaiA(dx < 0 ? 1 : -1);
+            }}
+          >
+            {vista === 'giorno' && (
+              <div className="card">
+                {inPeriodo.length === 0 && <div className="empty">Nessun appuntamento.</div>}
+                {inPeriodo.map((x) => (
+                  <RigaAppuntamento key={x.id} a={x} />
+                ))}
+              </div>
+            )}
+            {vista === 'settimana' && <Settimana lun={da} lista={inPeriodo} onApri={setAperto} />}
+            {vista === 'mese' && (
+              <Mese
+                mese={da}
+                lista={lista}
+                onGiorno={(d) => {
+                  setRif(d);
+                  setVista('giorno');
+                }}
+              />
+            )}
+            <div className="small muted swipe-suggerimento">Scorri a destra o a sinistra per cambiare {vista}</div>
+          </div>
+        }
 
         <div className="card">
           <h2>Carico ore nel periodo</h2>

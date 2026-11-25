@@ -1,9 +1,9 @@
 // PAC-01..03: catalogo prodotti per attività e pacchetti dei clienti con residue e scadenze
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { PackagePlus } from 'lucide-react';
 import { useStore } from '../data/store';
-import { daSeguire, FORMULE, nomeCliente, statoPacchetto, titolariDi } from '../data/logic';
+import { daSeguire, fissatiPrima, FORMULE, nomeCliente, statoPacchetto, titolariDi } from '../data/logic';
 import { ATTIVITA, type Attivita, type PacchettoCliente, type Prodotto, type TipoProdotto } from '../data/types';
 import { fmtDataBreve, fmtEuro } from '../lib/format';
 import { BadgeAttivita, CampoNumero, FiltroAttivita, Modal } from '../components/ui';
@@ -94,7 +94,8 @@ export function Pacchetti() {
   const [proroga, setProroga] = useState<PacchettoCliente | null>(null);
   const [nuovoProdotto, setNuovoProdotto] = useState(false);
 
-  const righe = db.pacchetti
+  // prima i clienti fissati in cima, poi per scadenza
+  const righe = fissatiPrima(db, db.pacchetti
     .map((k) => ({ k, s: statoPacchetto(db, k), seguito: titolariDi(k).some((id) => daSeguire(db.clienti.find((x) => x.id === id), statoPacchetto(db, k).prodotto.attivita)) }))
     .filter(({ s }) => att === 'tutte' || s.prodotto.attivita === att)
     .filter(({ s, seguito }) => {
@@ -104,14 +105,27 @@ export function Pacchetti() {
       if (filtro === 'conclusi') return s.scaduto;
       return true;
     })
-    .sort((a, b) => a.s.giorni - b.s.giorni);
+    .sort((a, b) => a.s.giorni - b.s.giorni), (r) => titolariDi(r.k));
 
   return (
     <>
       <div className="page-head">
-        <div>
-          <h1>Pacchetti</h1>
-          <div className="sub">Sessioni residue scalate automaticamente dagli esiti delle sessioni</div>
+        <div className="titolo-con-azione">
+          <div>
+            <h1>Pacchetti</h1>
+            <div className="sub">Sessioni residue scalate automaticamente dagli esiti delle sessioni</div>
+          </div>
+          <button
+            className="btn primary icona-nuovo"
+            onClick={() => {
+              setTab('catalogo'); // il nuovo prodotto si vede subito nel catalogo
+              setNuovoProdotto(true);
+            }}
+            aria-label="Nuovo prodotto"
+            title="Nuovo prodotto (pacchetto, carnet, abbonamento, percorso…)"
+          >
+            <PackagePlus size={20} />
+          </button>
         </div>
         <div className="tabs">
           <button className={tab === 'clienti' ? 'on' : ''} onClick={() => setTab('clienti')}>Dei clienti</button>
@@ -233,11 +247,6 @@ export function Pacchetti() {
                 )}
               </div>
             ))}
-          <button className="card empty nuovo-prodotto" style={{ margin: 0, borderStyle: 'dashed' }} onClick={() => setNuovoProdotto(true)}>
-            <Plus size={20} />
-            <div style={{ fontWeight: 600, marginTop: 4 }}>Nuovo prodotto</div>
-            <div className="small">pacchetto, carnet, abbonamento, percorso…</div>
-          </button>
         </div>
       )}
       <p className="small muted" style={{ marginTop: 12 }}>

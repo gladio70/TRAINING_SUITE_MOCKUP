@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarPlus, CalendarRange, Mail, Pencil, Phone, Send, ShoppingBag } from 'lucide-react';
 import { useStore } from '../data/store';
-import { attivitaDi, consuma, FORMULE, nomeCliente, nomePacchetto, pacchettiDi, prodottoDi, statoPacchetto, statoPagamento } from '../data/logic';
+import { attivitaDi, consuma, FORMULE, nomeCliente, nomePacchetto, ordineClienti, pacchettiDi, prodottoDi, statoPacchetto, statoPagamento } from '../data/logic';
 import { ATTIVITA, ESITI, type Formula, type PacchettoCliente } from '../data/types';
 import { fmtData, fmtDataBreve, fmtEuro, fmtOra, toIsoLocale } from '../lib/format';
 import { Avatar, BadgePagamento, BadgeServizio, Modal } from '../components/ui';
@@ -156,7 +156,7 @@ export function ClienteDettaglio() {
                     <div className="grow">
                       <div className="t">{p.descrizione}</div>
                       <div className="d">
-                        {p.pagatoIl ? `Pagato il ${fmtDataBreve(p.pagatoIl)} · ${p.metodo}` : `Scadenza ${fmtDataBreve(p.scadenza)}`}
+                        {p.pagatoIl ? `Pagato il ${fmtDataBreve(p.pagatoIl)} · ${p.metodo}${p.automatico ? ' · registrato automaticamente' : ''}` : `Scadenza ${fmtDataBreve(p.scadenza)}`}
                       </div>
                     </div>
                     <span className="num" style={{ fontWeight: 700 }}>{fmtEuro(p.importo)}</span>
@@ -302,7 +302,7 @@ function VendiPacchetto({ clienteId, onClose }: { clienteId: string; onClose: ()
       <label className="lbl">Condiviso con (facoltativo)</label>
       <select className="field" value={condiviso} onChange={(e) => setCondiviso(e.target.value)}>
         <option value="">Nessuno: pacchetto individuale</option>
-        {altri.sort((a, b) => a.cognome.localeCompare(b.cognome)).map((x) => (
+        {altri.sort(ordineClienti).map((x) => (
           <option key={x.id} value={x.id}>{x.cognome} {x.nome}</option>
         ))}
       </select>

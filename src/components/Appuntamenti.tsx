@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, MapPin, Repeat, UserCheck, Users } from 'lucide-react';
 import { useStore } from '../data/store';
-import { consuma, inCarico, nomeAppuntamento, nomeCliente, prodottoDi, statoPacchetto, titolariDi } from '../data/logic';
+import { consuma, inCarico, nomeAppuntamento, nomeCliente, ordineClienti, prodottoDi, statoPacchetto, titolariDi } from '../data/logic';
 import { ATTIVITA, ESITI, type Appuntamento, type Attivita, type Esito, type Luogo } from '../data/types';
 import { aggiungiGiorni, fmtOra, inizioGiorno, toIsoLocale } from '../lib/format';
 import { Modal } from './ui';
@@ -195,7 +195,7 @@ export function NuovoAppuntamento({ onClose, clienteId, giorno }: { onClose: () 
         <option value="">{bodyCheck ? 'Nessuno: nuovo contatto' : 'Scegli…'}</option>
         {db.clienti
           .filter((c) => inCarico(c))
-          .sort((a, b) => a.cognome.localeCompare(b.cognome))
+          .sort(ordineClienti)
           .map((c) => (
             <option key={c.id} value={c.id}>
               {c.cognome} {c.nome}

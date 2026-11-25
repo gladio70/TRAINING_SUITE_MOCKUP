@@ -11,9 +11,10 @@ interface Props {
   campi?: Record<string, string>;
   chiave?: string;
   onClose: () => void;
+  onInviato?: () => void; // es. il pagamento ricorda che il link è stato inviato
 }
 
-export function InvioMessaggio({ clienteId, modelloId, campi, chiave, onClose }: Props) {
+export function InvioMessaggio({ clienteId, modelloId, campi, chiave, onClose, onInviato }: Props) {
   const { db, registraMessaggio } = useStore();
   const c = db.clienti.find((x) => x.id === clienteId)!;
   const [mod, setMod] = useState(modelloId ?? db.modelli[0].id);
@@ -28,6 +29,7 @@ export function InvioMessaggio({ clienteId, modelloId, campi, chiave, onClose }:
   const invia = (canale: 'WhatsApp' | 'Telegram' | 'Email') => {
     window.open(linkInvio(canale, c, testo, titolo), '_blank', 'noopener');
     registraMessaggio({ clienteId, canale, titolo, testo, chiave }); // COM-05 (anticipato): registro nello storico
+    onInviato?.();
     onClose();
   };
 

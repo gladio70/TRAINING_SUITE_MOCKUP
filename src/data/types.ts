@@ -41,6 +41,7 @@ export interface Cliente {
   note: string;
   privacyData?: string; // ISO date del consenso
   creatoIl: string;
+  fissato?: boolean; // compare in cima all'elenco clienti (es. cliente di prova per i test interni)
 }
 
 export type TipoProdotto = 'pacchetto' | 'carnet' | 'abbonamento' | 'percorso' | 'smallgroup' | 'programmazione';
@@ -119,7 +120,7 @@ export interface Appuntamento {
   serie?: string; // descrizione ricorrenza (AGE-02)
 }
 
-export type MetodoPagamento = 'contanti' | 'bonifico' | 'POS';
+export type MetodoPagamento = 'contanti' | 'bonifico' | 'POS' | 'online';
 
 export interface Pagamento {
   id: string;
@@ -131,6 +132,8 @@ export interface Pagamento {
   scadenza: string;
   pagatoIl?: string;
   metodo?: MetodoPagamento;
+  automatico?: boolean; // incasso registrato da solo (pagamento online, simulato nel mockup – anteprima PAC-05)
+  linkInviato?: string; // data di invio del link di pagamento
 }
 
 /** Costi professionali (anteprima ECO-03) */

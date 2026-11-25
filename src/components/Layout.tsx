@@ -40,7 +40,10 @@ export function Layout() {
       <aside className="sidebar">
         <div className="brand">
           <img src="icon-192.png" alt="" />
-          TRAINING SUITE
+          <span className="brand-nome">
+            TRAINING SUITE
+            <span className="tag-mockup">MOCKUP</span>
+          </span>
         </div>
         {VOCI.map(({ to, label, icon: I }) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
@@ -86,7 +89,9 @@ export function Layout() {
               </NavLink>
             ))}
           </div>
-          <p className="small muted" style={{ marginTop: 12 }}>TRAINING SUITE {etichettaVersione()}</p>
+          <p className="small muted" style={{ marginTop: 12 }}>
+            TRAINING SUITE <span className="tag-mockup">MOCKUP</span> {etichettaVersione()}
+          </p>
         </Modal>
       )}
 
