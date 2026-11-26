@@ -1,7 +1,7 @@
 // Dati dimostrativi, generati relativamente alla data di oggi così il mockup è sempre "vivo".
 // v0.3: la composizione riprende i numeri delle risposte di Mattia del 24/11/2026 (D-02);
 // nomi, recapiti e prezzi individuali sono INVENTATI (nessun dato reale, nessun contatto Virgin: V-01).
-import type { Appuntamento, Cliente, Costo, Db, Esito, Formula, PacchettoCliente, Pagamento, Presenza, Prodotto, ServizioCliente } from './types';
+import type { Appuntamento, Cliente, Costo, Db, Esito, Formula, PacchettoCliente, Pagamento, Presenza, Prodotto, ServizioCliente, UtenteApp } from './types';
 import { aggiungiGiorni, inizioGiorno, inizioSettimana, toIsoLocale } from '../lib/format';
 
 const oggi = inizioGiorno();
@@ -311,6 +311,25 @@ const costi: Costo[] = [
 export const MODELLO_LINK =
   'Ciao {nome}, ecco il link per pagare {descrizione} ({importo}) con carta, Apple Pay o Google Pay: {link}. Il pagamento si registra da solo. Grazie!';
 
+// ---------- utenti dell'app (anteprima: inviti simulati) ----------
+const nomeDi = (id: string) => {
+  const c = clienti.find((x) => x.id === id)!;
+  return { nome: `${c.nome} ${c.cognome}`, email: c.email, clienteId: id };
+};
+export const utentiDemo = (): UtenteApp[] => [
+  { id: 'u-mattia', nome: 'Mattia', email: 'mattia@esempio.it', ruolo: 'amministratore', stato: 'attivo', ultimoAccesso: at(oggi, 7, 40) },
+  { id: 'u-coll', nome: 'Luca Verdi (esempio)', email: 'luca.verdi@esempio.it', ruolo: 'collaboratore', stato: 'attivo', invitatoIl: at(aggiungiGiorni(oggi, -20), 18), canaleInvito: 'Email', ultimoAccesso: at(aggiungiGiorni(oggi, -3), 19, 5) },
+  { id: 'u-cn1', ...nomeDi('cn1'), ruolo: 'cliente', stato: 'attivo', invitatoIl: at(aggiungiGiorni(oggi, -2), 10), canaleInvito: 'Email', ultimoAccesso: at(aggiungiGiorni(oggi, -1), 21, 12) },
+  { id: 'u-lt1', ...nomeDi('lt1'), ruolo: 'cliente', stato: 'attivo', invitatoIl: at(aggiungiGiorni(oggi, -15), 9), canaleInvito: 'WhatsApp', ultimoAccesso: at(aggiungiGiorni(oggi, -2), 8, 30) },
+  { id: 'u-va1', ...nomeDi('va1'), ruolo: 'cliente', stato: 'attivo', invitatoIl: at(aggiungiGiorni(oggi, -12), 12), canaleInvito: 'Email', ultimoAccesso: at(aggiungiGiorni(oggi, -6), 13, 45) },
+  { id: 'u-vc1', ...nomeDi('vc1'), ruolo: 'cliente', stato: 'invitato', invitatoIl: at(aggiungiGiorni(oggi, -1), 18, 20), canaleInvito: 'WhatsApp' },
+  { id: 'u-va2', ...nomeDi('va2'), ruolo: 'cliente', stato: 'invitato', invitatoIl: at(aggiungiGiorni(oggi, -5), 11), canaleInvito: 'Email' },
+  { id: 'u-lt14', ...nomeDi('lt14'), ruolo: 'cliente', stato: 'disattivato', invitatoIl: at(aggiungiGiorni(oggi, -80), 10), canaleInvito: 'Email', ultimoAccesso: at(aggiungiGiorni(oggi, -40), 20) },
+];
+export const vistaClienteDemo = (): Db['vistaCliente'] => ({
+  pacchetti: true, appuntamenti: true, richieste: true, pagamenti: true, storico: true, obiettivi: false,
+});
+
 export function creaDbDemo(): Db {
   return {
     clienti,
@@ -339,5 +358,7 @@ export function creaDbDemo(): Db {
       { id: 't5', testo: 'Verifica adempimenti Fiscozen', data: isoGiorno(fineMese), fatto: false, categoria: 'amministrazione' },
     ],
     soglie: { residueMin: 2, giorniScadenza: 7 },
+    utenti: utentiDemo(),
+    vistaCliente: vistaClienteDemo(),
   };
 }

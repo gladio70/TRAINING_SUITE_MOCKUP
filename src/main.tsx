@@ -14,6 +14,8 @@ import { Messaggi } from './pages/Messaggi';
 import { Impostazioni } from './pages/Impostazioni';
 import { Community } from './pages/Community';
 import { Economia } from './pages/Economia';
+import { Utenti } from './pages/Utenti';
+import { VistaCliente } from './pages/VistaCliente';
 import './styles.css';
 import { avviaRilevamentoInstallazione } from './lib/installazione';
 
@@ -46,8 +48,11 @@ createRoot(document.getElementById('root')!).render(
             <Route path="economia" element={<Economia />} />
             <Route path="messaggi" element={<Messaggi />} />
             <Route path="impostazioni" element={<Impostazioni />} />
+            <Route path="utenti" element={<Utenti />} />
             <Route path="*" element={<Dashboard />} />
           </Route>
+          {/* anteprima dell'app del cliente: senza menu del coach */}
+          <Route path="vista-cliente/:id" element={<VistaCliente />} />
         </Routes>
       </HashRouter>
     </StoreProvider>

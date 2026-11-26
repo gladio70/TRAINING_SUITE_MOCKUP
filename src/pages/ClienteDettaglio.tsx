@@ -2,7 +2,8 @@
 // pagamenti, prossimi appuntamenti e storico cronologico
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarPlus, CalendarRange, Mail, Pencil, Phone, Send, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, CalendarRange, Mail, Pencil, Phone, Send, ShoppingBag, Smartphone } from 'lucide-react';
+import { InvitoModal } from './Utenti';
 import { useStore } from '../data/store';
 import { attivitaDi, consuma, FORMULE, nomeCliente, nomePacchetto, ordineClienti, pacchettiDi, prodottoDi, statoPacchetto, statoPagamento } from '../data/logic';
 import { ATTIVITA, ESITI, type Formula, type PacchettoCliente } from '../data/types';
@@ -20,7 +21,9 @@ export function ClienteDettaglio() {
   const [appt, setAppt] = useState(false);
   const [vendi, setVendi] = useState(false);
   const [proroga, setProroga] = useState<PacchettoCliente | null>(null);
+  const [invito, setInvito] = useState(false);
   const c = db.clienti.find((x) => x.id === id);
+  const utente = db.utenti.find((u) => u.clienteId === id);
   if (!c) return <div className="empty">Cliente non trovato. <Link to="/clienti">Torna all’elenco</Link></div>;
 
   const pacchetti = pacchettiDi(db, c.id).sort((a, b) => b.inizio.localeCompare(a.inizio));
@@ -89,6 +92,13 @@ export function ClienteDettaglio() {
             <button className="btn" onClick={() => setAppt(true)}><CalendarPlus size={16} /> Appuntamento</button>
             <button className="btn" onClick={() => setVendi(true)}><ShoppingBag size={16} /> Pacchetto</button>
             <button className="btn" onClick={() => setModifica(true)}><Pencil size={16} /> Modifica</button>
+            {utente ? (
+              <Link className="btn" to={`/vista-cliente/${c.id}`} title={`Accesso all’app: ${utente.stato}`}>
+                <Smartphone size={16} /> Vista app
+              </Link>
+            ) : (
+              <button className="btn" onClick={() => setInvito(true)}><Smartphone size={16} /> Invita all’app</button>
+            )}
           </div>
       </div>
 
@@ -198,6 +208,7 @@ export function ClienteDettaglio() {
 
       {modifica && <ClienteForm cliente={c} onClose={() => setModifica(false)} />}
       {msg && <InvioMessaggio clienteId={c.id} onClose={() => setMsg(false)} />}
+      {invito && <InvitoModal clienteId={c.id} onClose={() => setInvito(false)} />}
       {appt && <NuovoAppuntamento clienteId={c.id} onClose={() => setAppt(false)} />}
       {vendi && <VendiPacchetto clienteId={c.id} onClose={() => setVendi(false)} />}
       {proroga && <ProrogaModal k={proroga} onClose={() => setProroga(null)} />}

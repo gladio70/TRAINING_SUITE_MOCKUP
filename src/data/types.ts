@@ -177,6 +177,42 @@ export interface Soglie {
   giorniScadenza: number; // DASH-03: scadenza entro N giorni
 }
 
+// ---------- utenti dell'app (anteprima della versione reale: nel mockup gli inviti sono simulati) ----------
+
+export type Ruolo = 'amministratore' | 'collaboratore' | 'cliente';
+
+export const RUOLI: Record<Ruolo, { nome: string; descrizione: string }> = {
+  amministratore: { nome: 'Amministratore', descrizione: 'Vede e gestisce tutto: clienti, agenda, pagamenti, report economico, utenti e impostazioni.' },
+  collaboratore: { nome: 'Collaboratore', descrizione: 'Agenda, clienti e presenze. Non vede pagamenti, report economico, utenti e impostazioni.' },
+  cliente: { nome: 'Cliente', descrizione: 'Vede solo i propri dati, scelti nel riquadro “Cosa vede il cliente”. Mai i dati degli altri clienti né le note di Mattia.' },
+};
+
+export type StatoUtente = 'invitato' | 'attivo' | 'disattivato';
+
+export interface UtenteApp {
+  id: string;
+  nome: string;
+  email: string;
+  ruolo: Ruolo;
+  clienteId?: string; // per i clienti: la scheda a cui è collegato l'accesso
+  stato: StatoUtente;
+  invitatoIl?: string; // ISO datetime dell'ultimo invito
+  canaleInvito?: 'Email' | 'WhatsApp';
+  ultimoAccesso?: string; // ISO datetime
+}
+
+/** Sezioni dell'app che il cliente può vedere (da decidere con Mattia) */
+export type VoceVistaCliente = 'pacchetti' | 'appuntamenti' | 'richieste' | 'pagamenti' | 'storico' | 'obiettivi';
+
+export const VOCI_VISTA_CLIENTE: { voce: VoceVistaCliente; nome: string; descrizione: string }[] = [
+  { voce: 'pacchetti', nome: 'Pacchetti e sessioni residue', descrizione: 'Pacchetto o carnet in corso, sessioni rimaste e scadenza.' },
+  { voce: 'appuntamenti', nome: 'Prossimi appuntamenti', descrizione: 'Data, ora e luogo delle prossime sessioni.' },
+  { voce: 'richieste', nome: 'Richiesta di spostamento o disdetta', descrizione: 'Il cliente chiede dall’app; Mattia conferma (resta la regola delle 24 ore).' },
+  { voce: 'pagamenti', nome: 'Pagamenti', descrizione: 'Rate da pagare con scadenza e pagamenti già fatti; in futuro “Paga online”.' },
+  { voce: 'storico', nome: 'Storico sessioni', descrizione: 'Sessioni fatte, disdette e assenze (cosa è stato scalato).' },
+  { voce: 'obiettivi', nome: 'Obiettivi', descrizione: 'Gli obiettivi scritti da Mattia nella scheda cliente (le note restano private).' },
+];
+
 export interface Db {
   clienti: Cliente[];
   prodotti: Prodotto[];
@@ -188,6 +224,8 @@ export interface Db {
   messaggi: MessaggioInviato[];
   todo: Todo[];
   soglie: Soglie;
+  utenti: UtenteApp[];
+  vistaCliente: Record<VoceVistaCliente, boolean>;
   /** Migrazioni dei dati salvati già applicate (per non ripeterle) */
   migrazioni?: string[];
 }

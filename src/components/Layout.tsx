@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, TrendingUp, UserCheck, Users, Wallet } from 'lucide-react';
+import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, TrendingUp, UserCheck, UserCog, Users, Wallet } from 'lucide-react';
 import { useStore } from '../data/store';
 import { calcolaAvvisi, messaggiSuggeriti } from '../data/logic';
 import { Modal } from './ui';
@@ -16,6 +16,7 @@ const VOCI = [
   { to: '/pagamenti', label: 'Pagamenti', icon: Wallet, mobile: false },
   { to: '/economia', label: 'Report Economico', icon: TrendingUp, mobile: false },
   { to: '/messaggi', label: 'Messaggi', icon: MessageSquare, mobile: false },
+  { to: '/utenti', label: 'Utenti app', icon: UserCog, mobile: false },
   // Impostazioni: si aprono dalla rotella nella pagina Oggi
 ];
 

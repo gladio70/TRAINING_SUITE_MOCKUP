@@ -1,8 +1,8 @@
 // Archivio del mockup: tutto in memoria, salvato nel localStorage del browser.
 // Nella versione reale sarà sostituito dalle API (Cloudflare Workers + D1).
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, Todo } from './types';
-import { creaDbDemo, MODELLO_LINK } from './mock';
+import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, StatoUtente, Todo, UtenteApp, VoceVistaCliente } from './types';
+import { creaDbDemo, MODELLO_LINK, utentiDemo, vistaClienteDemo } from './mock';
 import { carnetAttivo, eliminaClienteDa } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
 
@@ -32,6 +32,12 @@ function carica(): Db {
           db.pagamenti = aggiungi(db.pagamenti, demo.pagamenti.filter((p) => p.id === 'pg-cn1'));
           db.appuntamenti = aggiungi(db.appuntamenti, demo.appuntamenti.filter((a) => a.id === 'a-cn1'));
         }
+      }
+      // v0.3.20: utenti dell'app e scelte su cosa vede il cliente (anteprima)
+      if (!db.migrazioni?.includes('utenti-app')) {
+        db.migrazioni = [...(db.migrazioni ?? []), 'utenti-app'];
+        db.utenti = utentiDemo().filter((u) => !u.clienteId || db.clienti.some((c) => c.id === u.clienteId));
+        db.vistaCliente = vistaClienteDemo();
       }
       return db;
     }
@@ -70,6 +76,10 @@ interface Azioni {
   toggleTodo: (id: string) => void;
   aggiungiTodo: (t: Omit<Todo, 'id' | 'fatto'>) => void;
   setSoglie: (s: Soglie) => void;
+  invitaUtente: (u: Pick<UtenteApp, 'nome' | 'email' | 'ruolo' | 'clienteId' | 'canaleInvito'>) => void;
+  reinviaInvito: (id: string) => void;
+  setStatoUtente: (id: string, stato: StatoUtente) => void;
+  setVistaCliente: (voce: VoceVistaCliente, visibile: boolean) => void;
   ripristina: () => void;
 }
 
@@ -108,7 +118,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }),
       })),
     salvaCliente: (c) => setDb((d) => ({ ...d, clienti: d.clienti.map((x) => (x.id === c.id ? c : x)) })),
-    eliminaCliente: (id) => setDb((d) => eliminaClienteDa(d, id)),
+    eliminaCliente: (id) => setDb((d) => ({ ...eliminaClienteDa(d, id), utenti: d.utenti.filter((u) => u.clienteId !== id) })),
     nuovoCliente: (c) => {
       const id = uid();
       setDb((d) => ({ ...d, clienti: [...d.clienti, { ...c, id, creatoIl: oggiIso() }] }));
@@ -162,6 +172,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     toggleTodo: (id) => setDb((d) => ({ ...d, todo: d.todo.map((t) => (t.id === id ? { ...t, fatto: !t.fatto } : t)) })),
     aggiungiTodo: (t) => setDb((d) => ({ ...d, todo: [...d.todo, { ...t, id: uid(), fatto: false }] })),
     setSoglie: (soglie) => setDb((d) => ({ ...d, soglie })),
+    invitaUtente: (u) =>
+      setDb((d) => ({ ...d, utenti: [...d.utenti, { ...u, id: uid(), stato: 'invitato', invitatoIl: new Date().toISOString() }] })),
+    reinviaInvito: (id) => setDb((d) => ({ ...d, utenti: d.utenti.map((u) => (u.id === id ? { ...u, invitatoIl: new Date().toISOString() } : u)) })),
+    setStatoUtente: (id, stato) =>
+      setDb((d) => ({
+        ...d,
+        // "attivo" da invitato = invito accettato (simulato): primo accesso adesso
+        utenti: d.utenti.map((u) => (u.id === id ? { ...u, stato, ultimoAccesso: stato === 'attivo' && u.stato === 'invitato' ? new Date().toISOString() : u.ultimoAccesso } : u)),
+      })),
+    setVistaCliente: (voce, visibile) => setDb((d) => ({ ...d, vistaCliente: { ...d.vistaCliente, [voce]: visibile } })),
     ripristina: () => setDb(creaDbDemo()),
   };
 
