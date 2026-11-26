@@ -3,12 +3,12 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // Versione della app: numero da package.json + identificativo della build
-// (commit su GitHub Actions, altrimenti data e ora della compilazione locale).
+// (commit su GitHub Actions o Cloudflare Pages, altrimenti data e ora della compilazione locale).
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8').replace(/^﻿/, ''));
 const adesso = new Date();
 const versione = {
   versione: pkg.version as string,
-  build: (process.env.GITHUB_SHA ?? '').slice(0, 7) || `locale-${adesso.getTime().toString(36)}`,
+  build: (process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA ?? '').slice(0, 7) ||`locale-${adesso.getTime().toString(36)}`,
   data: adesso.toISOString(),
 };
 
