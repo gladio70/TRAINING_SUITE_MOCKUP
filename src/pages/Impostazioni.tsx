@@ -2,8 +2,7 @@
 // Si apre dalla rotella nella pagina Oggi.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Database, Download, Globe, LogOut, Moon, Smartphone, Sun, UserRound } from 'lucide-react';
-import { useAccesso } from '../components/Accesso';
+import { ArrowLeft, BookOpen, Database, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
 import { apertaComeApp, appenaInstallata, installa, installabile, seguiInstallazione, suIPhone } from '../lib/installazione';
 import { useStore } from '../data/store';
 import { CampoNumero } from '../components/ui';
@@ -114,29 +113,6 @@ function ProvaDatabase() {
   );
 }
 
-/** Utente entrato e pulsante Esci (solo sul sito Cloudflare, dove la login è attiva) */
-function Account() {
-  const { utente, senzaRete, esci } = useAccesso();
-  if (!utente) return null;
-  return (
-    <div className="stato-installazione">
-      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-        <span className="row" style={{ gap: 6, minWidth: 0 }}>
-          <UserRound size={16} />
-          <span style={{ minWidth: 0 }}>
-            <b>{utente.nome}</b>
-            <span className="small muted" style={{ display: 'block', overflowWrap: 'anywhere' }}>{utente.email}</span>
-          </span>
-        </span>
-        <button className="btn sm" onClick={() => confirm('Uscire dall’applicazione?') && esci()}>
-          <LogOut size={14} /> Esci
-        </button>
-      </div>
-      {senzaRete && <p className="small muted" style={{ margin: '6px 0 0' }}>Senza rete: accesso verificato l’ultima volta che c’era connessione.</p>}
-    </div>
-  );
-}
-
 export function Impostazioni() {
   const { db, setSoglie, ripristina } = useStore();
   const [tema, setTema] = useState<Tema>(temaAttuale);
@@ -196,7 +172,6 @@ export function Impostazioni() {
             <BookOpen size={16} /> Manuale utente (PDF)
           </a>
           <StatoInstallazione />
-          <Account />
           <button className="btn primary pulsante-largo" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>
             Ripristina dati demo
           </button>

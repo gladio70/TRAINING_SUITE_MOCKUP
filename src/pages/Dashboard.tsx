@@ -1,7 +1,8 @@
 // DASH-01..05: vista "Oggi" con widget cliccabili, avvisi per priorità, cose da fare, messaggi da inviare
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, CalendarClock, ClipboardCheck, Package, PhoneCall, Plus, Send, Settings, TrendingUp, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarClock, ClipboardCheck, Package, LogOut, PhoneCall, Plus, Send, Settings, TrendingUp, UserRound, Wallet } from 'lucide-react';
+import { useAccesso } from '../components/Accesso';
 import { useStore } from '../data/store';
 import { attivitaDi, calcolaAvvisi, daRichiamare, economiaMese, daSeguire, messaggiSuggeriti, nomeCliente, oreAppuntamenti, statoPagamento, statoPacchetto, titolariDi } from '../data/logic';
 import type { Attivita } from '../data/types';
@@ -15,6 +16,7 @@ const PRIO = ['Scaduto / urgente', 'Oggi', 'Questa settimana'];
 
 export function Dashboard() {
   const { db, toggleTodo, aggiungiTodo } = useStore();
+  const { utente, senzaRete, esci } = useAccesso();
   // dagli avvisi: "?vai=cose-da-fare" porta al riquadro Cose da fare e lo evidenzia un momento
   const [sp, setSp] = useSearchParams();
   const coseDaFare = useRef<HTMLDivElement>(null);
@@ -72,13 +74,25 @@ export function Dashboard() {
     <>
       <div className="page-head">
         <div className="titolo-con-azione">
-          <div>
-            <h1>Ciao Mattia</h1>
+          <div style={{ minWidth: 0 }}>
+            <h1>Ciao {utente ? utente.nome.split(' ')[0] : 'Mattia'}</h1>
             <div className="sub" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
+            {utente && (
+              <div className="utente-home small muted" title={senzaRete ? 'Senza rete: accesso verificato l’ultima volta che c’era connessione' : undefined}>
+                <UserRound size={14} /> <span>{utente.email}</span>
+              </div>
+            )}
           </div>
-          <Link to="/impostazioni" className="btn ghost icona" aria-label="Impostazioni" title="Impostazioni">
-            <Settings size={20} />
-          </Link>
+          <div className="row" style={{ gap: 2, flexWrap: 'nowrap' }}>
+            {utente && (
+              <button className="btn ghost icona" aria-label="Esci" title="Esci" onClick={() => confirm('Uscire dall’applicazione?') && esci()}>
+                <LogOut size={20} />
+              </button>
+            )}
+            <Link to="/impostazioni" className="btn ghost icona" aria-label="Impostazioni" title="Impostazioni">
+              <Settings size={20} />
+            </Link>
+          </div>
         </div>
         <div className="row">
           <FiltroAttivita valore={filtro} onChange={setFiltro} />

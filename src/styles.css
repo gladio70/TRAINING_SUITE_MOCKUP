@@ -511,3 +511,7 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 .accesso-logo img { width: 48px; height: 48px; border-radius: 12px; }
 .accesso-logo b { font-size: 1.15rem; }
 .btn.ghost.pulsante-largo.small { margin-top: 6px; color: var(--muted); }
+
+/* Utente entrato, sotto il saluto nella home (solo sul sito Cloudflare) */
+.utente-home { display: flex; align-items: center; gap: 5px; margin-top: 3px; min-width: 0; }
+.utente-home span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
