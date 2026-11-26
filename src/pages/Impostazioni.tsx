@@ -52,7 +52,7 @@ interface EsitoProva {
   ok: boolean;
   errore?: string;
   totale?: number;
-  ultime?: { quando: string; dispositivo: string; versione: string }[];
+  ultime?: { quando: string; dispositivo: string; versione: string; ip?: string | null }[];
 }
 
 /** Prova del database Cloudflare D1: funziona solo sul sito Cloudflare (training-suite-mockup.pages.dev) */
@@ -83,7 +83,7 @@ function ProvaDatabase() {
     <div className="card">
       <h2>Prova database</h2>
       <p className="small muted">
-        Prova tecnica del database Cloudflare D1 per la versione reale. Registra solo data, tipo di dispositivo e versione: nessun dato dei clienti.
+        Prova tecnica del database Cloudflare D1 per la versione reale. Registra data, tipo di dispositivo, versione e indirizzo IP di chi preme il pulsante: nessun dato dei clienti.
       </p>
       <div className="row" style={{ gap: 8 }}>
         <button className="btn primary grow" disabled={stato === 'attesa'} onClick={() => chiama(true)}>
@@ -102,7 +102,7 @@ function ProvaDatabase() {
             <ul className="small muted" style={{ paddingLeft: 18, margin: 0 }}>
               {esito.ultime.map((p) => (
                 <li key={p.quando}>
-                  {new Date(p.quando).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'medium' })} · {p.dispositivo} · v{p.versione}
+                  {new Date(p.quando).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'medium' })} · {p.dispositivo} · v{p.versione}{p.ip ? ` · IP ${p.ip}` : ''}
                 </li>
               ))}
             </ul>
