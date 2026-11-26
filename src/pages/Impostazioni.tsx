@@ -2,7 +2,7 @@
 // Si apre dalla rotella nella pagina Oggi.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
+import { ArrowLeft, BookOpen, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
 import { apertaComeApp, appenaInstallata, installa, installabile, seguiInstallazione, suIPhone } from '../lib/installazione';
 import { useStore } from '../data/store';
 import { CampoNumero } from '../components/ui';
@@ -102,6 +102,9 @@ export function Impostazioni() {
             Versione {etichettaVersione()} del {new Date(VERSIONE.data).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}.
             A ogni apertura la app controlla se ne è uscita una nuova e la carica da sola.
           </p>
+          <a className="btn link-manuale" href="manuale-utente.pdf" target="_blank" rel="noopener">
+            <BookOpen size={16} /> Manuale utente (PDF)
+          </a>
           <StatoInstallazione />
           <button className="btn" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>
             Ripristina dati demo

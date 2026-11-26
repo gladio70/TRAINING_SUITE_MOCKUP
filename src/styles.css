@@ -499,3 +499,6 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 /* Filtri su una sola riga (Pacchetti) */
 .chips.una-riga { flex-wrap: nowrap; width: 100%; }
 .chips.una-riga .chip { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 6px 8px; }
+
+/* Link al manuale utente (Impostazioni) */
+.link-manuale { width: 100%; justify-content: center; margin: 4px 0 12px; text-decoration: none; }
