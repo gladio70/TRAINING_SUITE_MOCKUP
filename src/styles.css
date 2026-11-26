@@ -501,4 +501,5 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 .chips.una-riga .chip { flex: 1 1 auto; justify-content: center; white-space: nowrap; padding: 6px 8px; }
 
 /* Link al manuale utente (Impostazioni) */
+.pulsante-largo { width: 100%; justify-content: center; margin-top: 12px; }
 .link-manuale { width: 100%; justify-content: center; margin: 4px 0 12px; text-decoration: none; }

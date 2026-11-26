@@ -102,11 +102,11 @@ export function Impostazioni() {
             Versione {etichettaVersione()} del {new Date(VERSIONE.data).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}.
             A ogni apertura la app controlla se ne è uscita una nuova e la carica da sola.
           </p>
-          <a className="btn link-manuale" href="manuale-utente.pdf" target="_blank" rel="noopener">
+          <a className="btn primary link-manuale" href="manuale-utente.pdf" target="_blank" rel="noopener">
             <BookOpen size={16} /> Manuale utente (PDF)
           </a>
           <StatoInstallazione />
-          <button className="btn" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>
+          <button className="btn primary pulsante-largo" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>
             Ripristina dati demo
           </button>
           <h2 style={{ marginTop: 20 }}>Integrazioni (versione reale)</h2>
