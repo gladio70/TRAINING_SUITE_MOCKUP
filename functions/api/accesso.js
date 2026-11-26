@@ -6,6 +6,7 @@
 //   POST /api/accesso {azione:'entra', email, password}
 //   POST /api/accesso {azione:'esci'}
 //   POST /api/accesso {azione:'crea', codice, nome, email, password}  → nuovo utente (serve il codice di attivazione)
+//   POST /api/accesso {azione:'reimposta', codice, email, password}    → password dimenticata (serve il codice di attivazione)
 //
 // Sicurezza:
 // - le password non sono salvate: si salva solo un'impronta PBKDF2-SHA256 con sale casuale;
@@ -142,7 +143,7 @@ export async function onRequest({ request, env }) {
       return json({ ok: true, utente: { email: u.email, nome: u.nome } }, 200, { 'set-cookie': cookieSessione(codice) });
     }
 
-    if (corpo.azione === 'crea') {
+    if (corpo.azione === 'crea' || corpo.azione === 'reimposta') {
       if (!env.CODICE_ATTIVAZIONE)
         return json({ ok: false, errore: 'Codice di attivazione non configurato su Cloudflare (variabile segreta CODICE_ATTIVAZIONE).' }, 503);
       if (await troppiTentativi(db, ip)) return json({ ok: false, errore: `Troppi tentativi sbagliati: riprova tra ${FINESTRA_MINUTI} minuti.` }, 429);
@@ -153,9 +154,25 @@ export async function onRequest({ request, env }) {
       const nome = String(corpo.nome ?? '').trim().slice(0, 80);
       const email = pulisciEmail(corpo.email);
       const password = String(corpo.password ?? '');
-      if (!nome) return json({ ok: false, errore: 'Scrivi il nome.' }, 400);
+      if (corpo.azione === 'crea' && !nome) return json({ ok: false, errore: 'Scrivi il nome.' }, 400);
       if (!emailValida(email)) return json({ ok: false, errore: 'Email non valida.' }, 400);
       if (password.length < 8 || password.length > 200) return json({ ok: false, errore: 'La password deve avere almeno 8 caratteri.' }, 400);
+
+      if (corpo.azione === 'reimposta') {
+        // password dimenticata: con il codice di attivazione si sceglie una password nuova;
+        // tutte le sessioni aperte dell'utente (anche su altri dispositivi) vengono chiuse
+        const u = await db.prepare('SELECT id, email, nome FROM utenti WHERE email = ?').bind(email).first();
+        if (!u) return json({ ok: false, errore: 'Nessun utente con questa email.' }, 404);
+        const sale = casuale(16);
+        await db.batch([
+          db.prepare('UPDATE utenti SET impronta = ?, sale = ?, iterazioni = ? WHERE id = ?').bind(await impronta(password, sale, ITERAZIONI), hex(sale), ITERAZIONI, u.id),
+          db.prepare('DELETE FROM sessioni WHERE utente_id = ?').bind(u.id),
+          db.prepare('DELETE FROM tentativi WHERE ip = ?').bind(ip),
+        ]);
+        const codice = await apriSessione(db, u.id, ip);
+        return json({ ok: true, utente: { email: u.email, nome: u.nome } }, 200, { 'set-cookie': cookieSessione(codice) });
+      }
+
       const esiste = await db.prepare('SELECT id FROM utenti WHERE email = ?').bind(email).first();
       if (esiste) return json({ ok: false, errore: 'Esiste già un utente con questa email.' }, 409);
       const sale = casuale(16);

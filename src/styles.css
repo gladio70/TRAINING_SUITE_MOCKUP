@@ -510,8 +510,11 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 .accesso-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .accesso-logo img { width: 48px; height: 48px; border-radius: 12px; }
 .accesso-logo b { font-size: 1.15rem; }
-.btn.ghost.pulsante-largo.small { margin-top: 6px; color: var(--muted); }
 
 /* Utente entrato, sotto il saluto nella home (solo sul sito Cloudflare) */
 .utente-home { display: flex; align-items: center; gap: 5px; margin-top: 3px; min-width: 0; }
 .utente-home span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.accesso-link { display: flex; justify-content: space-between; gap: 4px; margin-top: 8px; }
+.accesso-link .btn { color: var(--muted); padding-left: 4px; padding-right: 4px; }
+.accesso-link .btn:hover { color: var(--text); }

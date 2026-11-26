@@ -126,19 +126,32 @@ export function Accesso({ children }: { children: ReactNode }) {
   );
 }
 
+type Modo = 'entra' | 'crea' | 'reimposta';
+const TITOLI: Record<Modo, string> = { entra: 'Accedi', crea: 'Nuovo utente', reimposta: 'Password dimenticata' };
+
 function ModuloAccesso({ primoAvvio, entrato }: { primoAvvio: boolean; entrato: (u: Utente) => void }) {
-  const [nuovo, setNuovo] = useState(primoAvvio);
+  const [modo, setModo] = useState<Modo>(primoAvvio ? 'crea' : 'entra');
   const [campi, setCampi] = useState({ nome: '', email: '', password: '', codice: '' });
   const [errore, setErrore] = useState('');
   const [attesa, setAttesa] = useState(false);
   const imposta = (k: keyof typeof campi) => (e: { target: { value: string } }) => setCampi({ ...campi, [k]: e.target.value });
+  const vaiA = (m: Modo) => {
+    setModo(m);
+    setErrore('');
+    setCampi({ ...campi, password: '', codice: '' });
+  };
+  const conCodice = modo !== 'entra';
 
   const invia = async (e: FormEvent) => {
     e.preventDefault();
     setErrore('');
     setAttesa(true);
     try {
-      const r = await chiama(nuovo ? { azione: 'crea', ...campi } : { azione: 'entra', email: campi.email, password: campi.password });
+      const corpo =
+        modo === 'crea' ? { azione: 'crea', ...campi }
+        : modo === 'reimposta' ? { azione: 'reimposta', email: campi.email, password: campi.password, codice: campi.codice }
+        : { azione: 'entra', email: campi.email, password: campi.password };
+      const r = await chiama(corpo);
       if (r?.ok && r.utente) entrato(r.utente);
       else setErrore(r?.errore ?? 'Risposta non valida dal server.');
     } catch {
@@ -149,13 +162,18 @@ function ModuloAccesso({ primoAvvio, entrato }: { primoAvvio: boolean; entrato: 
 
   return (
     <form onSubmit={invia}>
-      <h2 style={{ margin: '4px 0 2px' }}>{nuovo ? 'Nuovo utente' : 'Accedi'}</h2>
-      {nuovo && (
+      <h2 style={{ margin: '4px 0 2px' }}>{TITOLI[modo]}</h2>
+      {modo === 'crea' && (
         <p className="small muted" style={{ margin: 0 }}>
           {primoAvvio ? 'Non c’è ancora nessun utente: crea il primo. ' : ''}Serve il codice di attivazione impostato su Cloudflare.
         </p>
       )}
-      {nuovo && (
+      {modo === 'reimposta' && (
+        <p className="small muted" style={{ margin: 0 }}>
+          Scegli una password nuova: serve il codice di attivazione impostato su Cloudflare. Gli altri dispositivi dovranno rifare l’accesso.
+        </p>
+      )}
+      {modo === 'crea' && (
         <>
           <label className="lbl" htmlFor="acc-nome">Nome</label>
           <input id="acc-nome" className="field" autoComplete="name" value={campi.nome} onChange={imposta('nome')} required />
@@ -163,18 +181,20 @@ function ModuloAccesso({ primoAvvio, entrato }: { primoAvvio: boolean; entrato: 
       )}
       <label className="lbl" htmlFor="acc-email">Email</label>
       <input id="acc-email" className="field" type="email" autoComplete="username" value={campi.email} onChange={imposta('email')} required />
-      <label className="lbl" htmlFor="acc-password">Password{nuovo ? ' (almeno 8 caratteri)' : ''}</label>
+      <label className="lbl" htmlFor="acc-password">
+        {modo === 'reimposta' ? 'Nuova password' : 'Password'}{conCodice ? ' (almeno 8 caratteri)' : ''}
+      </label>
       <input
         id="acc-password"
         className="field"
         type="password"
-        autoComplete={nuovo ? 'new-password' : 'current-password'}
-        minLength={nuovo ? 8 : undefined}
+        autoComplete={conCodice ? 'new-password' : 'current-password'}
+        minLength={conCodice ? 8 : undefined}
         value={campi.password}
         onChange={imposta('password')}
         required
       />
-      {nuovo && (
+      {conCodice && (
         <>
           <label className="lbl" htmlFor="acc-codice">Codice di attivazione</label>
           <input id="acc-codice" className="field" type="password" autoComplete="off" value={campi.codice} onChange={imposta('codice')} required />
@@ -182,12 +202,27 @@ function ModuloAccesso({ primoAvvio, entrato }: { primoAvvio: boolean; entrato: 
       )}
       {errore && <p className="small" style={{ color: 'var(--danger)', marginBottom: 0 }}>{errore}</p>}
       <button className="btn primary pulsante-largo" type="submit" disabled={attesa}>
-        {nuovo ? <UserPlus size={16} /> : <LogIn size={16} />} {attesa ? 'Attendere…' : nuovo ? 'Crea utente ed entra' : 'Entra'}
+        {modo === 'crea' ? <UserPlus size={16} /> : modo === 'reimposta' ? <KeyRound size={16} /> : <LogIn size={16} />}{' '}
+        {attesa ? 'Attendere…' : modo === 'crea' ? 'Crea utente ed entra' : modo === 'reimposta' ? 'Cambia password ed entra' : 'Entra'}
       </button>
       {!primoAvvio && (
-        <button type="button" className="btn ghost pulsante-largo small" onClick={() => { setNuovo(!nuovo); setErrore(''); }}>
-          {nuovo ? <><LogIn size={14} /> Ho già un utente: accedi</> : <><KeyRound size={14} /> Nuovo utente (con codice di attivazione)</>}
-        </button>
+        <div className="accesso-link">
+          {modo !== 'entra' && (
+            <button type="button" className="btn ghost small" onClick={() => vaiA('entra')}>
+              <LogIn size={14} /> Torna all’accesso
+            </button>
+          )}
+          {modo !== 'reimposta' && (
+            <button type="button" className="btn ghost small" onClick={() => vaiA('reimposta')}>
+              <KeyRound size={14} /> Password dimenticata
+            </button>
+          )}
+          {modo !== 'crea' && (
+            <button type="button" className="btn ghost small" onClick={() => vaiA('crea')}>
+              <UserPlus size={14} /> Nuovo utente
+            </button>
+          )}
+        </div>
       )}
     </form>
   );
