@@ -59,10 +59,10 @@ export function VistaCliente() {
 
       <div className="vista-cliente">
         <div className="vc-testa">
-          <img src="icon-192.png" alt="" />
+          <img src="icon-cliente-192.png" alt="" />
           <div>
             <h1>Ciao {c.nome}</h1>
-            <div className="small muted">Il tuo spazio con Mattia</div>
+            <div className="small muted">Il tuo training con Mattia</div>
           </div>
         </div>
 

@@ -533,7 +533,7 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 .vista-cliente { max-width: 480px; margin: 0 auto; padding: 16px 16px 32px; }
 .vista-cliente .card h2 { display: flex; align-items: center; gap: 8px; }
 .vc-testa { display: flex; align-items: center; gap: 12px; margin: 4px 0 16px; }
-.vc-testa img { width: 44px; height: 44px; border-radius: 12px; }
+.vc-testa img { width: 56px; height: 56px; border-radius: 14px; }
 .vc-testa h1 { margin: 0; }
 .vc-pacchetto + .vc-pacchetto { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
 .vc-numero { margin: 6px 0; color: var(--muted); }
