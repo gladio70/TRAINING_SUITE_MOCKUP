@@ -25,9 +25,14 @@ const fileVersione: Plugin = {
   },
 };
 
-export default defineConfig({
-  plugins: [react(), fileVersione],
+export default defineConfig(async ({ mode }) => ({
+  plugins: [
+    react(),
+    fileVersione,
+    // "vite --mode api": prova sul PC delle API di Cloudflare (login, database) con un database in memoria
+    ...(mode === 'api' ? [(await import('./dev/api-locale.mjs')).apiLocale()] : []),
+  ],
   base: './',
   define: { __VERSIONE__: JSON.stringify(versione) },
   server: { port: 5173, strictPort: true },
-});
+}));

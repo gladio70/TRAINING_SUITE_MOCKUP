@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { StoreProvider } from './data/store';
 import { Layout } from './components/Layout';
+import { Accesso } from './components/Accesso';
 import { Dashboard } from './pages/Dashboard';
 import { Agenda } from './pages/Agenda';
 import { Clienti } from './pages/Clienti';
@@ -30,6 +31,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <Accesso>
     <StoreProvider>
       <HashRouter>
         <Routes>
@@ -49,5 +51,6 @@ createRoot(document.getElementById('root')!).render(
         </Routes>
       </HashRouter>
     </StoreProvider>
+    </Accesso>
   </StrictMode>,
 );
