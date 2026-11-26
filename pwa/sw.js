@@ -25,6 +25,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.endsWith('/version.json')) return;
+  if (url.pathname.includes('/api/')) return; // API sul server (prova del database): mai dalla copia salvata
 
   if (req.mode === 'navigate') {
     e.respondWith(

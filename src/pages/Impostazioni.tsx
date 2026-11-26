@@ -2,7 +2,7 @@
 // Si apre dalla rotella nella pagina Oggi.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
+import { ArrowLeft, BookOpen, Database, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
 import { apertaComeApp, appenaInstallata, installa, installabile, seguiInstallazione, suIPhone } from '../lib/installazione';
 import { useStore } from '../data/store';
 import { CampoNumero } from '../components/ui';
@@ -48,6 +48,71 @@ function StatoInstallazione() {
   );
 }
 
+interface EsitoProva {
+  ok: boolean;
+  errore?: string;
+  totale?: number;
+  ultime?: { quando: string; dispositivo: string; versione: string }[];
+}
+
+/** Prova del database Cloudflare D1: funziona solo sul sito Cloudflare (training-suite-mockup.pages.dev) */
+function ProvaDatabase() {
+  const [stato, setStato] = useState<'pronto' | 'attesa'>('pronto');
+  const [esito, setEsito] = useState<EsitoProva | null>(null);
+
+  const chiama = async (registra: boolean) => {
+    setStato('attesa');
+    try {
+      const r = await fetch('api/prova', registra
+        ? { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ dispositivo: matchMedia('(max-width: 860px)').matches ? 'telefono' : 'PC', versione: VERSIONE.versione }) }
+        : undefined);
+      const tipo = r.headers.get('content-type') ?? '';
+      if (!tipo.includes('application/json')) {
+        setEsito({ ok: false, errore: 'Il database è disponibile solo sul sito Cloudflare (training-suite-mockup.pages.dev), non qui.' });
+      } else {
+        setEsito((await r.json()) as EsitoProva);
+      }
+    } catch {
+      setEsito({ ok: false, errore: 'Nessuna risposta dal server: controlla la connessione.' });
+    }
+    setStato('pronto');
+  };
+
+  return (
+    <div className="card">
+      <h2>Prova database</h2>
+      <p className="small muted">
+        Prova tecnica del database Cloudflare D1 per la versione reale. Registra solo data, tipo di dispositivo e versione: nessun dato dei clienti.
+      </p>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn primary grow" disabled={stato === 'attesa'} onClick={() => chiama(true)}>
+          <Database size={16} /> Registra una prova
+        </button>
+        <button className="btn" disabled={stato === 'attesa'} onClick={() => chiama(false)}>
+          Leggi
+        </button>
+      </div>
+      {stato === 'attesa' && <p className="small muted">Collegamento al database…</p>}
+      {esito && !esito.ok && <p className="small" style={{ color: 'var(--danger)' }}>{esito.errore}</p>}
+      {esito?.ok && (
+        <>
+          <p className="small"><b>Database collegato.</b> Prove registrate in totale: <b>{esito.totale}</b></p>
+          {!!esito.ultime?.length && (
+            <ul className="small muted" style={{ paddingLeft: 18, margin: 0 }}>
+              {esito.ultime.map((p) => (
+                <li key={p.quando}>
+                  {new Date(p.quando).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'medium' })} · {p.dispositivo} · v{p.versione}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function Impostazioni() {
   const { db, setSoglie, ripristina } = useStore();
   const [tema, setTema] = useState<Tema>(temaAttuale);
@@ -89,6 +154,7 @@ export function Impostazioni() {
             <CampoNumero min={1} max={60} valore={db.soglie.giorniScadenza} onChange={(n) => setSoglie({ ...db.soglie, giorniScadenza: n })} />
             <p className="small muted">Valori ammessi: residue da 0 a 10, giorni da 1 a 60.</p>
           </div>
+          <ProvaDatabase />
         </div>
         <div className="card" style={{ margin: 0 }}>
           <h2>Informazioni Applicazione</h2>
