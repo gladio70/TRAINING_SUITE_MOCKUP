@@ -2,7 +2,7 @@
 // Si apre dalla rotella nella pagina Oggi.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Database, Download, Globe, Moon, Smartphone, Sun } from 'lucide-react';
+import { ArrowLeft, BookOpen, Database, Download, Globe, Moon, Scale, Smartphone, Sun } from 'lucide-react';
 import { apertaComeApp, appenaInstallata, installa, installabile, seguiInstallazione, suIPhone } from '../lib/installazione';
 import { useStore } from '../data/store';
 import { CampoNumero } from '../components/ui';
@@ -170,6 +170,9 @@ export function Impostazioni() {
           </p>
           <a className="btn primary link-manuale" href="manuale-utente.pdf" target="_blank" rel="noopener">
             <BookOpen size={16} /> Manuale utente (PDF)
+          </a>
+          <a className="btn primary link-manuale" href="privacy-aspetti-legali.pdf" target="_blank" rel="noopener">
+            <Scale size={16} /> Privacy e aspetti legali (PDF)
           </a>
           <StatoInstallazione />
           <button className="btn primary pulsante-largo" onClick={() => confirm('Ripristinare i dati dimostrativi? Le modifiche fatte andranno perse.') && ripristina()}>

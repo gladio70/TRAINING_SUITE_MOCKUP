@@ -8,7 +8,7 @@ import { useStore } from '../data/store';
 import { attivitaDi, consuma, FORMULE, nomeCliente, nomePacchetto, ordineClienti, pacchettiDi, prodottoDi, statoPacchetto, statoPagamento } from '../data/logic';
 import { ATTIVITA, ESITI, type Formula, type PacchettoCliente } from '../data/types';
 import { fmtData, fmtDataBreve, fmtEuro, fmtOra, toIsoLocale } from '../lib/format';
-import { Avatar, BadgePagamento, BadgeServizio, Modal } from '../components/ui';
+import { AvvisoSalute, Avatar, BadgePagamento, BadgeServizio, Modal } from '../components/ui';
 import { NuovoAppuntamento, RigaAppuntamento } from '../components/Appuntamenti';
 import { InvioMessaggio } from '../components/InvioMessaggio';
 import { ClienteForm } from './Clienti';
@@ -239,7 +239,8 @@ export function ProrogaModal({ k, onClose }: { k: PacchettoCliente; onClose: () 
       </div>
       <p className="small">Nuova scadenza: <b>{fmtDataBreve(toIsoLocale(nuova))}</b></p>
       <label className="lbl">Motivo (resta nello storico)</label>
-      <input className="field" autoFocus value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Es. infortunio, ferie, classi annullate" />
+      <input className="field" autoFocus value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Es. pausa concordata, ferie, classi annullate" />
+      <AvvisoSalute />
     </Modal>
   );
 }

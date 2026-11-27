@@ -7,7 +7,7 @@ import { useStore } from '../data/store';
 import { daRichiamare, effettiEliminazione, ordineClienti, pacchettiDi, statoPacchetto } from '../data/logic';
 import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente, type StatoServizio } from '../data/types';
 import { fmtDataBreve, toIsoLocale } from '../lib/format';
-import { Avatar, BadgeServizio, FiltroAttivita, Modal } from '../components/ui';
+import { AvvisoSalute, Avatar, BadgeServizio, FiltroAttivita, Modal, OBIETTIVI_ALLENAMENTO } from '../components/ui';
 
 type FiltroStato = StatoServizio | 'in carico' | 'da richiamare' | 'tutti';
 
@@ -270,14 +270,19 @@ export function ClienteForm({ cliente, onClose, servizioIniziale = 'LT' }: { cli
               <input className="field" type="date" value={s.ripresa ?? ''} onChange={(e) => setServizio(s.attivita, { ripresa: e.target.value || undefined })} />
             </div>
           </div>
-          <input className="field" style={{ marginTop: 8 }} placeholder="Nota sul servizio (es. motivo della pausa)" value={s.nota ?? ''}
+          <input className="field" style={{ marginTop: 8 }} placeholder="Nota sul servizio (es. pausa per lavoro fino a fine mese)" value={s.nota ?? ''}
             onChange={(e) => setServizio(s.attivita, { nota: e.target.value || undefined })} />
         </div>
       ))}
-      <label className="lbl">Obiettivi</label>
-      <input className="field" value={c.obiettivi} onChange={(e) => set('obiettivi', e.target.value)} />
+      {/* PRIV-01/02: obiettivi di allenamento (da elenco o testo breve) e nessun dato sulla salute nei campi liberi */}
+      <label className="lbl">Obiettivi di allenamento</label>
+      <input className="field" list="obiettivi-allenamento" placeholder="Scegli dall’elenco o scrivi (es. Primo muscle-up)" value={c.obiettivi} onChange={(e) => set('obiettivi', e.target.value)} />
+      <datalist id="obiettivi-allenamento">
+        {OBIETTIVI_ALLENAMENTO.map((o) => <option key={o} value={o} />)}
+      </datalist>
       <label className="lbl">Note</label>
-      <textarea className="field" rows={3} value={c.note} onChange={(e) => set('note', e.target.value)} />
+      <textarea className="field" rows={3} placeholder="Es. preferisce allenarsi la mattina" value={c.note} onChange={(e) => set('note', e.target.value)} />
+      <AvvisoSalute />
       <label className="todo" style={{ marginTop: 10 }}>
         <input
           type="checkbox"

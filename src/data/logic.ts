@@ -295,7 +295,7 @@ export function testoMessaggio(db: Db, modelloId: string, c: Cliente, campi: Rec
     nome: c.nome,
     cognome: c.cognome,
     attivita: attivitaDi(c).map((a) => ATTIVITA[a].nome).join(' / '),
-    link: 'https://esempio.it/anamnesi/demo', // dominio ancora da definire (D-09)
+    link: 'https://esempio.it/questionario/demo', // dominio ancora da definire (D-09)
     ...campi,
   });
 }

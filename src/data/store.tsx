@@ -2,7 +2,7 @@
 // Nella versione reale sarà sostituito dalle API (Cloudflare Workers + D1).
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, StatoUtente, Todo, UtenteApp, VoceVistaCliente } from './types';
-import { creaDbDemo, MODELLO_LINK, utentiDemo, vistaClienteDemo } from './mock';
+import { creaDbDemo, MODELLO_LINK, MODELLO_QUESTIONARIO, SOSTITUZIONI_SALUTE, utentiDemo, vistaClienteDemo } from './mock';
 import { carnetAttivo, eliminaClienteDa } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
 
@@ -38,6 +38,14 @@ function carica(): Db {
         db.migrazioni = [...(db.migrazioni ?? []), 'utenti-app'];
         db.utenti = utentiDemo().filter((u) => !u.clienteId || db.clienti.some((c) => c.id === u.clienteId));
         db.vistaCliente = vistaClienteDemo();
+      }
+      // v0.3.22: niente dati sulla salute (PRIV-01/02): sostituiti i testi demo e il questionario di anamnesi.
+      // Cambia solo i testi demo rimasti identici: quelli modificati a mano non vengono toccati.
+      if (!db.migrazioni?.includes('no-dati-sanitari')) {
+        db.migrazioni = [...(db.migrazioni ?? []), 'no-dati-sanitari'];
+        const s = (v: string) => SOSTITUZIONI_SALUTE[v] ?? v;
+        db.clienti = db.clienti.map((c) => ({ ...c, obiettivi: s(c.obiettivi), note: s(c.note) }));
+        db.modelli = db.modelli.map((m) => (m.id === 'm-anam' && m.titolo === 'Questionario anamnesi' ? { ...m, ...MODELLO_QUESTIONARIO } : m));
       }
       return db;
     }

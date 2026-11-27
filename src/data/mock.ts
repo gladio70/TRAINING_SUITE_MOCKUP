@@ -52,15 +52,15 @@ const anag: R[] = [
   ['lt6', 'Chiara', 'Marini', [['LT', 'attivo']], 'Ricomposizione corporea'],
   ['lt7', 'Giorgia', 'Pellegrini', [['LT', 'attivo']], 'Percorso online continuativo'],
   ['lt8', 'Simone', 'Ferraro', [['LT', 'pausa', tra(inizioMeseProssimo), 'Rientro previsto il mese prossimo']], 'Ripresa dopo il trasloco'],
-  ['lt9', 'Laura', 'Bianchi', [['LT', 'pausa', 3, 'Pausa per lavoro: risentirsi a fine mese']], 'Postura'],
+  ['lt9', 'Laura', 'Bianchi', [['LT', 'pausa', 3, 'Pausa per lavoro: risentirsi a fine mese']], 'Mobilità'],
   ['lt10', 'Federica', 'Villa', [['LT', 'pausa', -2, 'Doveva richiamare dopo le vacanze']], 'Tonificazione'],
   ['lt11', 'Matteo', 'Caruso', [['LT', 'occasionale', undefined, 'Circa una sessione ogni due mesi']], 'Mantenimento'],
   ['lt12', 'Irene', 'De Luca', [['LT', 'occasionale', undefined, 'Online: schede su richiesta']], 'Allenamento in viaggio'],
   ['lt13', 'Nicola', 'Fabbri', [['LT', 'da verificare', undefined, 'Percorso misto studio/online: definire la formula']], 'Corsa e forza'],
-  ['lt14', 'Davide', 'Gallo', [['LT', 'terminato', undefined, 'Percorso interrotto']], 'Rientro dopo infortunio'],
+  ['lt14', 'Davide', 'Gallo', [['LT', 'terminato', undefined, 'Percorso interrotto']], 'Forza e resistenza'],
   // Virgin Active: 7 acquisiti, 3 acquisti precedenti, 2 in scambio professionale
-  ['va1', 'Giulia', 'Ferri', [['VA', 'attivo']], 'Tonificazione e postura'],
-  ['va2', 'Marco', 'Bellini', [['VA', 'attivo']], 'Perdere 6 kg entro l’estate'],
+  ['va1', 'Giulia', 'Ferri', [['VA', 'attivo']], 'Tonificazione'],
+  ['va2', 'Marco', 'Bellini', [['VA', 'attivo']], 'Dimagrimento entro l’estate'],
   ['va3', 'Francesca', 'Romano', [['VA', 'attivo']], 'Forza generale'],
   ['va4', 'Alessio', 'Lombardi', [['VA', 'attivo', undefined, 'Pacchetto da rinnovare']], 'Preparazione concorso'],
   ['va5', 'Stefano', 'Bruno', [['VA', 'da verificare', undefined, 'Dettagli del pacchetto da verificare']], 'Rientro in palestra'],
@@ -95,7 +95,7 @@ const clienti: Cliente[] = anag.map(([id, nome, cognome, servizi, obiettivi, not
   telegram: i % 4 === 0 ? `@${nome.toLowerCase()}${i}` : undefined,
   servizi: servizi.map(([attivita, stato, rip, nota]) => ({ attivita, stato, ripresa: rip != null ? g(rip) : undefined, nota })),
   obiettivi,
-  note: note ?? (id === 'lt14' ? 'Evitare carichi assiali pesanti fino a nuova indicazione del fisioterapista.' : ''),
+  note: note ?? (id === 'lt14' ? 'Preferisce allenarsi la mattina presto.' : ''),
   privacyData: id === 'vc12' ? undefined : g(-60 - i * 4),
   creatoIl: g(-90 - i * 6),
 }));
@@ -330,6 +330,21 @@ export const vistaClienteDemo = (): Db['vistaCliente'] => ({
   pacchetti: true, appuntamenti: true, richieste: true, pagamenti: true, storico: true, obiettivi: false,
 });
 
+/** Questionario iniziale su obiettivi e disponibilità: niente anamnesi, che resta fuori dall'app (PRIV-01) */
+export const MODELLO_QUESTIONARIO = {
+  titolo: 'Questionario iniziale',
+  testo: 'Ciao {nome}, prima di iniziare ti chiedo di compilare questo breve questionario su obiettivi e disponibilità: {link}. Grazie!',
+};
+
+/** v0.3.22: testi dei dati demo che contenevano informazioni sulla salute → testi conformi (PRIV-01/02) */
+export const SOSTITUZIONI_SALUTE: Record<string, string> = {
+  'Postura': 'Mobilità',
+  'Rientro dopo infortunio': 'Forza e resistenza',
+  'Tonificazione e postura': 'Tonificazione',
+  'Perdere 6 kg entro l’estate': 'Dimagrimento entro l’estate',
+  'Evitare carichi assiali pesanti fino a nuova indicazione del fisioterapista.': 'Preferisce allenarsi la mattina presto.',
+};
+
 export function creaDbDemo(): Db {
   return {
     clienti,
@@ -340,7 +355,7 @@ export function creaDbDemo(): Db {
     costi,
     modelli: [
       { id: 'm-pres', titolo: 'Presentazione', testo: 'Ciao {nome}! Sono Mattia, il tuo coach. Benvenuto/a in {attivita}: ti scrivo qui per organizzare i nostri allenamenti. A presto!' },
-      { id: 'm-anam', titolo: 'Questionario anamnesi', testo: 'Ciao {nome}, prima di iniziare ti chiedo di compilare questo breve questionario: {link}. Grazie!' },
+      { id: 'm-anam', titolo: MODELLO_QUESTIONARIO.titolo, testo: MODELLO_QUESTIONARIO.testo },
       { id: 'm-prom', titolo: 'Promemoria appuntamento', testo: 'Ciao {nome}, ti ricordo l’appuntamento di {data} alle {ora} ({luogo}). Se non puoi venire avvisami almeno 24 ore prima. A domani!' },
       { id: 'm-conf', titolo: 'Conferma appuntamento', testo: 'Ciao {nome}, confermato: {data} alle {ora} ({luogo}).' },
       { id: 'm-rinn', titolo: 'Rinnovo pacchetto', testo: 'Ciao {nome}, il tuo {pacchetto} sta per terminare ({residue} sessioni residue, scadenza {scadenza}). Vuoi che ti prepari il rinnovo?' },

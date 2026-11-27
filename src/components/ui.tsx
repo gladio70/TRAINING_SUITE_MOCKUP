@@ -1,5 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, ShieldAlert, X, type LucideIcon } from 'lucide-react';
+
+/** PRIV-02: obiettivi di allenamento proposti (si può anche scrivere un testo breve) */
+export const OBIETTIVI_ALLENAMENTO = ['Forza', 'Mobilità', 'Skill (verticale, muscle-up, leve)', 'Resistenza', 'Dimagrimento', 'Tonificazione', 'Preparazione atletica', 'Mantenimento'];
+
+/** PRIV-01: l'app non contiene dati sulla salute (documento “Privacy e aspetti legali”) */
+export function AvvisoSalute() {
+  return (
+    <p className="avviso-salute">
+      <ShieldAlert size={14} /> Non inserire informazioni sulla salute (infortuni, patologie, terapie, indicazioni mediche): restano fuori dall’app.
+    </p>
+  );
+}
 
 /**
  * Campo numerico che si può svuotare e riscrivere: mentre si scrive accetta anche il campo vuoto
