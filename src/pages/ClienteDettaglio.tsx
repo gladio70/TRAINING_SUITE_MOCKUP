@@ -8,7 +8,7 @@ import { useStore } from '../data/store';
 import { attivitaDi, consuma, FORMULE, nomeCliente, nomePacchetto, ordineClienti, pacchettiDi, prodottoDi, statoPacchetto, statoPagamento } from '../data/logic';
 import { ATTIVITA, ESITI, type Formula, type PacchettoCliente } from '../data/types';
 import { fmtData, fmtDataBreve, fmtEuro, fmtOra, toIsoLocale } from '../lib/format';
-import { AvvisoSalute, Avatar, BadgePagamento, BadgeServizio, Modal } from '../components/ui';
+import { AvvisoSalute, Avatar, BadgePagamento, BadgeServizio, Modal, PulsanteTelegram } from '../components/ui';
 import { NuovoAppuntamento, RigaAppuntamento } from '../components/Appuntamenti';
 import { InvioMessaggio } from '../components/InvioMessaggio';
 import { ClienteForm } from './Clienti';
@@ -86,6 +86,10 @@ export function ClienteDettaglio() {
             </div>
             {c.obiettivi && <p style={{ margin: '10px 0 0' }}><b>Obiettivi:</b> {c.obiettivi}</p>}
             {c.note && <p className="small" style={{ margin: '4px 0 0' }}><b>Note:</b> {c.note}</p>}
+            {/* CLI-08: la parte tecnica resta su Telegram */}
+            <p className="small muted" style={{ margin: '6px 0 0' }}>
+              {c.canaleTelegram ? 'Schede, video e feedback sono sul canale Telegram del cliente.' : 'Canale Telegram per schede e feedback non indicato: aggiungilo da Modifica.'}
+            </p>
           </div>
           <div className="cli-azioni">
             <button className="btn wa" onClick={() => setMsg(true)}><Send size={16} /> Messaggio</button>
@@ -99,6 +103,7 @@ export function ClienteDettaglio() {
             ) : (
               <button className="btn" onClick={() => setInvito(true)}><Smartphone size={16} /> Invita all’app</button>
             )}
+            <PulsanteTelegram link={c.canaleTelegram} testo="Schede su Telegram" />
           </div>
       </div>
 

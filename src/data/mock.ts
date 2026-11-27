@@ -86,6 +86,14 @@ const anag: R[] = [
   ['vc12', 'Diego', 'Marino', [['VC', 'occasionale', undefined, 'Partecipa senza carnet']], 'Allenamento libero'],
 ];
 
+/** CLI-08: link di esempio ai canali Telegram (finti: nel mockup non portano a canali reali) */
+export const CANALI_DEMO: Record<string, string> = {
+  cn1: 'https://t.me/+demo-schede-claudio',
+  lt1: 'https://t.me/+demo-schede-sara',
+  va1: 'https://t.me/+demo-schede-giulia',
+  vc1: 'https://t.me/+demo-schede-valerio',
+};
+
 const clienti: Cliente[] = anag.map(([id, nome, cognome, servizi, obiettivi, note], i) => ({
   id,
   nome,
@@ -93,6 +101,7 @@ const clienti: Cliente[] = anag.map(([id, nome, cognome, servizi, obiettivi, not
   telefono: `+39 34${i % 10} ${String(1000000 + i * 73519).slice(0, 7)}`,
   email: `${nome.toLowerCase()}.${cognome.toLowerCase().replace(/\s/g, '')}@esempio.it`,
   telegram: i % 4 === 0 ? `@${nome.toLowerCase()}${i}` : undefined,
+  canaleTelegram: CANALI_DEMO[id],
   servizi: servizi.map(([attivita, stato, rip, nota]) => ({ attivita, stato, ripresa: rip != null ? g(rip) : undefined, nota })),
   obiettivi,
   note: note ?? (id === 'lt14' ? 'Preferisce allenarsi la mattina presto.' : ''),
@@ -103,7 +112,7 @@ const clienti: Cliente[] = anag.map(([id, nome, cognome, servizi, obiettivi, not
 // Cliente di prova con DATI REALI per i test interni (richiesto dall'utente il 25/11/2026), fissato in cima all'elenco.
 // Attenzione: il mockup è pubblico, quindi questi recapiti sono visibili a chiunque apra il sito o il repository.
 clienti.unshift({
-  id: 'cn1', nome: 'Claudio', cognome: 'Nanni', telefono: '+39 338 4758583', email: 'cnanni70@gmail.com', telegram: '@gladio70',
+  id: 'cn1', nome: 'Claudio', cognome: 'Nanni', telefono: '+39 338 4758583', email: 'cnanni70@gmail.com', telegram: '@gladio70', canaleTelegram: 'https://t.me/+demo-schede-claudio',
   servizi: [{ attivita: 'VA', stato: 'attivo', nota: 'Cliente di prova con dati reali (test interno)' }],
   obiettivi: 'Test del mockup con dati reali', note: '', privacyData: g(0), creatoIl: g(0), fissato: true,
 });

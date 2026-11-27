@@ -7,7 +7,7 @@ import { useStore } from '../data/store';
 import { daRichiamare, effettiEliminazione, ordineClienti, pacchettiDi, statoPacchetto } from '../data/logic';
 import { ATTIVITA, STATI, type Attivita, type Cliente, type ServizioCliente, type StatoServizio } from '../data/types';
 import { fmtDataBreve, toIsoLocale } from '../lib/format';
-import { AvvisoSalute, Avatar, BadgeServizio, FiltroAttivita, Modal, OBIETTIVI_ALLENAMENTO } from '../components/ui';
+import { AvvisoSalute, Avatar, BadgeServizio, FiltroAttivita, linkTelegramValido, Modal, OBIETTIVI_ALLENAMENTO } from '../components/ui';
 
 type FiltroStato = StatoServizio | 'in carico' | 'da richiamare' | 'tutti';
 
@@ -243,6 +243,10 @@ export function ClienteForm({ cliente, onClose, servizioIniziale = 'LT' }: { cli
           <input className="field" value={c.telegram ?? ''} onChange={(e) => set('telegram', e.target.value)} placeholder="@utente" />
         </div>
       </div>
+      {/* CLI-08 / PRIV-15: schede, foto, video e feedback restano su Telegram; qui solo il link */}
+      <label className="lbl">Canale Telegram (schede, video e feedback)</label>
+      <input className="field" type="url" value={c.canaleTelegram ?? ''} onChange={(e) => set('canaleTelegram', e.target.value.trim() || undefined)} placeholder="https://t.me/…" />
+      {c.canaleTelegram && !linkTelegramValido(c.canaleTelegram) && <p className="small" style={{ color: 'var(--danger)', margin: '4px 0 0' }}>Il link deve iniziare con https://t.me/</p>}
       <label className="lbl">Servizi * (anche più di uno, ognuno con il suo stato)</label>
       <div className="chips">
         {(Object.keys(ATTIVITA) as Attivita[]).map((a) => (

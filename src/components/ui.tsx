@@ -1,8 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Plus, ShieldAlert, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Send, ShieldAlert, X, type LucideIcon } from 'lucide-react';
 
 /** PRIV-02: obiettivi di allenamento proposti (si può anche scrivere un testo breve) */
 export const OBIETTIVI_ALLENAMENTO = ['Forza', 'Mobilità', 'Skill (verticale, muscle-up, leve)', 'Resistenza', 'Dimagrimento', 'Tonificazione', 'Preparazione atletica', 'Mantenimento'];
+
+/** CLI-08: si accettano solo link di Telegram */
+export const linkTelegramValido = (s?: string) => !!s && /^https:\/\/t\.me\/\S+$/.test(s.trim());
+
+/** Pulsante che apre il canale Telegram del cliente (schede, video, feedback) */
+export function PulsanteTelegram({ link, testo = 'Canale Telegram', largo }: { link?: string; testo?: string; largo?: boolean }) {
+  if (!linkTelegramValido(link)) return null;
+  return (
+    <a className={`btn tg${largo ? ' pulsante-largo' : ''}`} href={link} target="_blank" rel="noopener noreferrer">
+      <Send size={16} /> {testo}
+    </a>
+  );
+}
 
 /** PRIV-01: l'app non contiene dati sulla salute (documento “Privacy e aspetti legali”) */
 export function AvvisoSalute() {

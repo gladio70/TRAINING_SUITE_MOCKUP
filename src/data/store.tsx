@@ -2,7 +2,7 @@
 // Nella versione reale sarà sostituito dalle API (Cloudflare Workers + D1).
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Appuntamento, Cliente, Db, Esito, Formula, MessaggioInviato, PacchettoCliente, Pagamento, Prodotto, Soglie, StatoUtente, Todo, UtenteApp, VoceVistaCliente } from './types';
-import { creaDbDemo, MODELLO_LINK, MODELLO_QUESTIONARIO, SOSTITUZIONI_SALUTE, utentiDemo, vistaClienteDemo } from './mock';
+import { CANALI_DEMO, creaDbDemo, MODELLO_LINK, MODELLO_QUESTIONARIO, SOSTITUZIONI_SALUTE, utentiDemo, vistaClienteDemo } from './mock';
 import { carnetAttivo, eliminaClienteDa } from './logic';
 import { aggiungiGiorni, toIsoLocale, uid } from '../lib/format';
 
@@ -46,6 +46,11 @@ function carica(): Db {
         const s = (v: string) => SOSTITUZIONI_SALUTE[v] ?? v;
         db.clienti = db.clienti.map((c) => ({ ...c, obiettivi: s(c.obiettivi), note: s(c.note) }));
         db.modelli = db.modelli.map((m) => (m.id === 'm-anam' && m.titolo === 'Questionario anamnesi' ? { ...m, ...MODELLO_QUESTIONARIO } : m));
+      }
+      // v0.3.23: link di esempio al canale Telegram (CLI-08) per alcuni clienti demo, se non già indicato
+      if (!db.migrazioni?.includes('canale-telegram')) {
+        db.migrazioni = [...(db.migrazioni ?? []), 'canale-telegram'];
+        db.clienti = db.clienti.map((c) => (c.canaleTelegram || !CANALI_DEMO[c.id] ? c : { ...c, canaleTelegram: CANALI_DEMO[c.id] }));
       }
       return db;
     }

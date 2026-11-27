@@ -36,6 +36,8 @@ export interface Cliente {
   telefono: string;
   email: string;
   telegram?: string;
+  /** CLI-08: link al canale o alla chat Telegram con schede, video e feedback (nessun file nell'app) */
+  canaleTelegram?: string;
   servizi: ServizioCliente[];
   obiettivi: string;
   note: string;
@@ -183,7 +185,7 @@ export type Ruolo = 'amministratore' | 'collaboratore' | 'cliente';
 
 export const RUOLI: Record<Ruolo, { nome: string; descrizione: string }> = {
   amministratore: { nome: 'Amministratore', descrizione: 'Vede e gestisce tutto: clienti, agenda, pagamenti, report economico, utenti e impostazioni.' },
-  collaboratore: { nome: 'Collaboratore', descrizione: 'Agenda, clienti e presenze. Non vede pagamenti, report economico, utenti e impostazioni.' },
+  collaboratore: { nome: 'Collaboratore', descrizione: 'In futuro, quando Mattia vorrà delegare alcune attività. Agenda, clienti e presenze. Non vede pagamenti, report economico, utenti e impostazioni.' },
   cliente: { nome: 'Cliente', descrizione: 'Vede solo i propri dati, scelti nel riquadro “Cosa vede il cliente”. Mai i dati degli altri clienti né le note di Mattia.' },
 };
 

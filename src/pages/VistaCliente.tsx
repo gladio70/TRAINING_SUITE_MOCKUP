@@ -8,7 +8,7 @@ import { useStore } from '../data/store';
 import { consuma, pacchettiDi, prodottoDi, statoPacchetto, statoPagamento } from '../data/logic';
 import { ESITI } from '../data/types';
 import { fmtData, fmtDataBreve, fmtEuro, fmtOra } from '../lib/format';
-import { BadgePagamento } from '../components/ui';
+import { BadgePagamento, PulsanteTelegram } from '../components/ui';
 
 const simulato = (testo: string) => alert(`${testo}\n\n(Anteprima: nel mockup non succede nulla.)`);
 
@@ -196,6 +196,7 @@ export function VistaCliente() {
           </div>
         )}
 
+        <PulsanteTelegram link={c.canaleTelegram} testo="Le tue schede su Telegram" largo />
         <button className="btn wa pulsante-largo" onClick={() => simulato('Si apre WhatsApp con la chat di Mattia.')}>
           <MessageCircle size={16} /> Scrivi a Mattia
         </button>
