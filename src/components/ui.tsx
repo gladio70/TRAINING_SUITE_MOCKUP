@@ -4,8 +4,8 @@ import { ChevronDown, ChevronUp, Plus, Send, ShieldAlert, X, type LucideIcon } f
 /** PRIV-02: obiettivi di allenamento proposti (si può anche scrivere un testo breve) */
 export const OBIETTIVI_ALLENAMENTO = ['Forza', 'Mobilità', 'Skill (verticale, muscle-up, leve)', 'Resistenza', 'Dimagrimento', 'Tonificazione', 'Preparazione atletica', 'Mantenimento'];
 
-/** CLI-08: si accettano solo link di Telegram */
-export const linkTelegramValido = (s?: string) => !!s && /^https:\/\/t\.me\/\S+$/.test(s.trim());
+/** CLI-08: si accettano solo link di Telegram (t.me oppure Telegram Web, es. https://web.telegram.org/a/#-123) */
+export const linkTelegramValido = (s?: string) => !!s && /^https:\/\/(t\.me\/|web\.telegram\.org\/)\S+$/.test(s.trim());
 
 /** Pulsante che apre il canale Telegram del cliente (schede, video, feedback) */
 export function PulsanteTelegram({ link, testo = 'Canale Telegram', largo }: { link?: string; testo?: string; largo?: boolean }) {

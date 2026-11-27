@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, TrendingUp, UserCheck, UserCog, Users, Wallet } from 'lucide-react';
+import { CalendarDays, Home, MessageSquare, MoreHorizontal, Package, Settings, TrendingUp, UserCheck, UserCog, Users, Wallet } from 'lucide-react';
 import { useStore } from '../data/store';
 import { calcolaAvvisi, messaggiSuggeriti } from '../data/logic';
 import { Modal } from './ui';
@@ -53,6 +53,11 @@ export function Layout() {
             {badge(to) > 0 && <span className="nav-badge">{badge(to)}</span>}
           </NavLink>
         ))}
+        {/* solo nella barra laterale (PC): sul telefono le Impostazioni si aprono dalla rotella nella pagina Oggi */}
+        <NavLink to="/impostazioni" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+          <Settings size={18} />
+          Impostazioni
+        </NavLink>
         <div className="sidebar-foot">
           Mockup · dati dimostrativi
           <br />

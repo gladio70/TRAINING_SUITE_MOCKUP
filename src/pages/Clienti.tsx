@@ -245,8 +245,8 @@ export function ClienteForm({ cliente, onClose, servizioIniziale = 'LT' }: { cli
       </div>
       {/* CLI-08 / PRIV-15: schede, foto, video e feedback restano su Telegram; qui solo il link */}
       <label className="lbl">Canale Telegram (schede, video e feedback)</label>
-      <input className="field" type="url" value={c.canaleTelegram ?? ''} onChange={(e) => set('canaleTelegram', e.target.value.trim() || undefined)} placeholder="https://t.me/…" />
-      {c.canaleTelegram && !linkTelegramValido(c.canaleTelegram) && <p className="small" style={{ color: 'var(--danger)', margin: '4px 0 0' }}>Il link deve iniziare con https://t.me/</p>}
+      <input className="field" type="url" value={c.canaleTelegram ?? ''} onChange={(e) => set('canaleTelegram', e.target.value.trim() || undefined)} placeholder="https://t.me/… oppure https://web.telegram.org/a/#…" />
+      {c.canaleTelegram && !linkTelegramValido(c.canaleTelegram) && <p className="small" style={{ color: 'var(--danger)', margin: '4px 0 0' }}>Il link deve iniziare con https://t.me/ oppure https://web.telegram.org/</p>}
       <label className="lbl">Servizi * (anche più di uno, ognuno con il suo stato)</label>
       <div className="chips">
         {(Object.keys(ATTIVITA) as Attivita[]).map((a) => (

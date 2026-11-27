@@ -52,6 +52,11 @@ function carica(): Db {
         db.migrazioni = [...(db.migrazioni ?? []), 'canale-telegram'];
         db.clienti = db.clienti.map((c) => (c.canaleTelegram || !CANALI_DEMO[c.id] ? c : { ...c, canaleTelegram: CANALI_DEMO[c.id] }));
       }
+      // v0.3.24: Claudio (cliente di prova) punta al suo canale Telegram reale, se aveva ancora il link di esempio
+      if (!db.migrazioni?.includes('canale-telegram-cn1')) {
+        db.migrazioni = [...(db.migrazioni ?? []), 'canale-telegram-cn1'];
+        db.clienti = db.clienti.map((c) => (c.id === 'cn1' && (!c.canaleTelegram || c.canaleTelegram === 'https://t.me/+demo-schede-claudio') ? { ...c, canaleTelegram: CANALI_DEMO.cn1 } : c));
+      }
       return db;
     }
   } catch {
