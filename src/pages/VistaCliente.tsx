@@ -196,7 +196,7 @@ export function VistaCliente() {
           </div>
         )}
 
-        <PulsanteTelegram link={c.canaleTelegram} testo="Le tue schede su Telegram" largo />
+        <PulsanteTelegram link={c.canaleTelegram} testo="Il tuo allenamento su Telegram" largo />
         <button className="btn wa pulsante-largo" onClick={() => simulato('Si apre WhatsApp con la chat di Mattia.')}>
           <MessageCircle size={16} /> Scrivi a Mattia
         </button>
