@@ -556,3 +556,7 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 .page-head { position: relative; }
 .utente-pc { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; max-width: 50%; }
 .utente-pc-testo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* PC: più spazio tra il saluto (con l'utente a destra) e la riga di data e filtri */
+@media (min-width: 861px) {
+  .page-head .data-oggi { margin-top: 22px; }
+}

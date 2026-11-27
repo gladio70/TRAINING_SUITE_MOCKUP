@@ -81,10 +81,7 @@ export function Dashboard() {
         {utente && (
           <div className="utente-pc solo-pc" title={titoloAccesso}>
             <UserRound size={16} />
-            <span className="utente-pc-testo">
-              <b>{utente.nome}</b>
-              <span className="muted"> · {utente.email}</span>
-            </span>
+            <b className="utente-pc-testo">{utente.nome}</b>
             <button className="btn ghost icona" aria-label="Esci" title="Esci" onClick={esciConConferma}>
               <LogOut size={20} />
             </button>
@@ -93,7 +90,7 @@ export function Dashboard() {
         <div className="titolo-con-azione">
           <div style={{ minWidth: 0 }}>
             <h1>Ciao {utente ? utente.nome.split(' ')[0] : 'Mattia'}</h1>
-            <div className="sub" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
+            <div className="sub data-oggi" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
             {utente && (
               <div className="utente-home small muted solo-telefono" title={titoloAccesso}>
                 <UserRound size={14} /> <span>{utente.email}</span>
