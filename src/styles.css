@@ -542,3 +542,17 @@ p .tag-mockup { margin-top: 0; vertical-align: 1px; }
 /* PRIV-01: avviso nei campi liberi */
 .avviso-salute { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 0; font-size: 0.78rem; color: var(--warn); }
 .avviso-salute svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Elementi solo per il telefono (su PC c'è la barra laterale) */
+@media (min-width: 861px) {
+  .solo-telefono { display: none !important; }
+}
+
+/* Elementi solo per il PC */
+@media (max-width: 860px) {
+  .solo-pc { display: none !important; }
+}
+/* Utente ed Esci in alto a destra nella pagina Oggi (PC), in linea con il saluto */
+.page-head { position: relative; }
+.utente-pc { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; max-width: 50%; }
+.utente-pc-testo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

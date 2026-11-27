@@ -17,6 +17,10 @@ const PRIO = ['Scaduto / urgente', 'Oggi', 'Questa settimana'];
 export function Dashboard() {
   const { db, toggleTodo, aggiungiTodo } = useStore();
   const { utente, senzaRete, esci } = useAccesso();
+  const titoloAccesso = senzaRete ? 'Senza rete: accesso verificato l’ultima volta che c’era connessione' : undefined;
+  const esciConConferma = () => {
+    if (confirm('Uscire dall’applicazione?')) esci();
+  };
   // dagli avvisi: "?vai=cose-da-fare" porta al riquadro Cose da fare e lo evidenzia un momento
   const [sp, setSp] = useSearchParams();
   const coseDaFare = useRef<HTMLDivElement>(null);
@@ -73,23 +77,37 @@ export function Dashboard() {
   return (
     <>
       <div className="page-head">
+        {/* solo PC: utente e Esci in alto a destra, in linea con il saluto */}
+        {utente && (
+          <div className="utente-pc solo-pc" title={titoloAccesso}>
+            <UserRound size={16} />
+            <span className="utente-pc-testo">
+              <b>{utente.nome}</b>
+              <span className="muted"> · {utente.email}</span>
+            </span>
+            <button className="btn ghost icona" aria-label="Esci" title="Esci" onClick={esciConConferma}>
+              <LogOut size={20} />
+            </button>
+          </div>
+        )}
         <div className="titolo-con-azione">
           <div style={{ minWidth: 0 }}>
             <h1>Ciao {utente ? utente.nome.split(' ')[0] : 'Mattia'}</h1>
             <div className="sub" style={{ textTransform: 'capitalize' }}>{fmtDataLunga(oggi)}</div>
             {utente && (
-              <div className="utente-home small muted" title={senzaRete ? 'Senza rete: accesso verificato l’ultima volta che c’era connessione' : undefined}>
+              <div className="utente-home small muted solo-telefono" title={titoloAccesso}>
                 <UserRound size={14} /> <span>{utente.email}</span>
               </div>
             )}
           </div>
           <div className="row" style={{ gap: 2, flexWrap: 'nowrap' }}>
             {utente && (
-              <button className="btn ghost icona" aria-label="Esci" title="Esci" onClick={() => confirm('Uscire dall’applicazione?') && esci()}>
+              <button className="btn ghost icona solo-telefono" aria-label="Esci" title="Esci" onClick={esciConConferma}>
                 <LogOut size={20} />
               </button>
             )}
-            <Link to="/impostazioni" className="btn ghost icona" aria-label="Impostazioni" title="Impostazioni">
+            {/* solo telefono: su PC le Impostazioni sono nella barra laterale */}
+            <Link to="/impostazioni" className="btn ghost icona solo-telefono" aria-label="Impostazioni" title="Impostazioni">
               <Settings size={20} />
             </Link>
           </div>
@@ -99,7 +117,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="banner">Mockup con dati dimostrativi: le modifiche restano solo in questo browser (rotella ⚙ in alto → ripristina).</div>
+      <div className="banner">Mockup con dati dimostrativi: le modifiche restano solo in questo browser (Impostazioni → Ripristina dati demo).</div>
 
       <div className="widgets">
         <Link to="/agenda" className="widget">

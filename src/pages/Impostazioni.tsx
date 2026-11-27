@@ -123,7 +123,7 @@ export function Impostazioni() {
 
   return (
     <>
-      <Link to="/" className="btn ghost sm" style={{ marginBottom: 8 }}>
+      <Link to="/" className="btn ghost sm solo-telefono" style={{ marginBottom: 8 }}>
         <ArrowLeft size={16} /> Oggi
       </Link>
       <div className="page-head">
